@@ -1,0 +1,33 @@
+﻿<Window x:Class="ProjectReferencesManager.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Visual studio project references manager">
+    <DockPanel>
+        <StackPanel DockPanel.Dock="Top"
+                    Orientation="Horizontal">
+            <TextBlock Margin="5"
+                       VerticalAlignment="Center"
+                       Text="Open solution:" />
+            <Button Margin="5"
+                    Width="80"
+                    Content="Browse"
+                    Command="{Binding Path=OpenSolutionCommand}" />
+            <TextBlock  Margin="5"
+                        VerticalAlignment="Center"
+                        Text="{Binding Path=SelectedSolution.FullPath}" />
+        </StackPanel>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition/>
+            </Grid.ColumnDefinitions>
+
+            <ListBox ItemsSource="{Binding Path=SelectedSolution.Projects}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding Path=Name}"/>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Grid>
+    </DockPanel>
+</Window>
