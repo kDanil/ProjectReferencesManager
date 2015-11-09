@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System;
 
 namespace ProjectReferencesManager
 {
@@ -53,19 +54,17 @@ namespace ProjectReferencesManager
                 {
                     this.selectedProject = value;
                     this.PropertyChanged.Raise(() => this.SelectedProject);
-
-                    this.LoadReferencedProjects();
                 }
             }
         }
 
-        private void LoadReferencedProjects()
+        private void LoadReferencedProjects(Project project)
         {
-            var projectInfos = new ProjectFileReader().Read(this.SelectedSolution.FolderPath + Path.DirectorySeparatorChar + this.SelectedProject.Path);
+            var projectInfos = new ProjectFileReader().Read(this.SelectedSolution.FolderPath + Path.DirectorySeparatorChar + project.Path);
 
             var guids = projectInfos.Select(p => p.GUID).ToArray();
 
-            this.SelectedProject.ReferencedProjects = this.SelectedSolution.Projects.Where(p => guids.Contains(p.GUID))
+            project.ReferencedProjects = this.SelectedSolution.Projects.Where(p => guids.Contains(p.GUID))
                                                                                     .OrderBy(p => p.Name)
                                                                                     .ToArray();
         }
@@ -83,6 +82,16 @@ namespace ProjectReferencesManager
                     FullPath = dialog.FileName,
                     Projects = this.LoadProjects(dialog.FileName)
                 };
+
+                this.LoadProjectReferences();
+            }
+        }
+
+        private void LoadProjectReferences()
+        {
+            foreach (var project in this.SelectedSolution.Projects)
+            {
+                this.LoadReferencedProjects(project);
             }
         }
 
