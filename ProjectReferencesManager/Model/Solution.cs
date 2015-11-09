@@ -1,9 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 
 namespace ProjectReferencesManager.Model
 {
-    public class Solution :INotifyPropertyChanged
+    public class Solution : INotifyPropertyChanged
     {
         private string fullPath;
 
@@ -21,6 +22,14 @@ namespace ProjectReferencesManager.Model
                     this.fullPath = value;
                     this.PropertyChanged.Raise(() => this.FullPath);
                 }
+            }
+        }
+
+        public string FolderPath
+        {
+            get
+            {
+                return Path.GetDirectoryName(this.fullPath);
             }
         }
 

@@ -31,7 +31,7 @@ namespace ProjectReferencesManager.Tools
                     {
                         Name = name,
                         Path = path,
-                        GUID = guid
+                        GUID = GUIDFormatter.Format(guid)
                     };
                 }
             }

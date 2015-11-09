@@ -3,6 +3,7 @@ using ProjectReferencesManager.Model;
 using ProjectReferencesManager.Tools;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 
 namespace ProjectReferencesManager
@@ -10,6 +11,8 @@ namespace ProjectReferencesManager
     public class MainWindowViewModel : INotifyPropertyChanged
     {
         private Solution selectedSolution;
+
+        private Project selectedProject;
 
         public MainWindowViewModel()
         {
@@ -37,6 +40,36 @@ namespace ProjectReferencesManager
             }
         }
 
+        public Project SelectedProject
+        {
+            get
+            {
+                return this.selectedProject;
+            }
+
+            set
+            {
+                if (this.selectedProject != value)
+                {
+                    this.selectedProject = value;
+                    this.PropertyChanged.Raise(() => this.SelectedProject);
+
+                    this.LoadReferencedProjects();
+                }
+            }
+        }
+
+        private void LoadReferencedProjects()
+        {
+            var projectInfos = new ProjectFileReader().Read(this.SelectedSolution.FolderPath + Path.DirectorySeparatorChar + this.SelectedProject.Path);
+
+            var guids = projectInfos.Select(p => p.GUID).ToArray();
+
+            this.SelectedProject.ReferencedProjects = this.SelectedSolution.Projects.Where(p => guids.Contains(p.GUID))
+                                                                                    .OrderBy(p => p.Name)
+                                                                                    .ToArray();
+        }
+
         private void OpenSolution()
         {
             var dialog = new OpenFileDialog();
@@ -47,7 +80,7 @@ namespace ProjectReferencesManager
             {
                 this.SelectedSolution = new Solution()
                 {
-                    FullPath = dialog.SafeFileName,
+                    FullPath = dialog.FileName,
                     Projects = this.LoadProjects(dialog.FileName)
                 };
             }
@@ -58,7 +91,9 @@ namespace ProjectReferencesManager
             return new SolutionFileReader().Read(filePath)
                                            .Select(p => new Project()
                                            {
-                                               Name = p.Name
+                                               Name = p.Name,
+                                               Path = p.Path,
+                                               GUID = p.GUID
                                            }).OrderBy(p => p.Name)
                                            .ToArray();
         }
