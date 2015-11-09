@@ -5,13 +5,16 @@ namespace ProjectReferencesManager.Model
 {
     public class Project : INotifyPropertyChanged
     {
+        private IEnumerable<Project> referencedProjects;
+        private IEnumerable<Project> dependentProjects;
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
         public string GUID { get; set; }
 
         public string Name { get; set; }
 
         public string Path { get; set; }
-
-        private IEnumerable<Project> referencedProjects;
 
         public IEnumerable<Project> ReferencedProjects
         {
@@ -30,7 +33,21 @@ namespace ProjectReferencesManager.Model
             }
         }
 
+        public IEnumerable<Project> DependentProjects
+        {
+            get
+            {
+                return this.dependentProjects;
+            }
 
-        public event PropertyChangedEventHandler PropertyChanged;
+            set
+            {
+                if (this.dependentProjects != value)
+                {
+                    this.dependentProjects = value;
+                    this.PropertyChanged.Raise(() => this.DependentProjects);
+                }
+            }
+        }
     }
 }

@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
-using System;
 
 namespace ProjectReferencesManager
 {
@@ -84,6 +83,17 @@ namespace ProjectReferencesManager
                 };
 
                 this.LoadProjectReferences();
+                this.FindDependentProjects();
+            }
+        }
+
+        private void FindDependentProjects()
+        {
+            foreach (var project in this.SelectedSolution.Projects)
+            {
+                project.DependentProjects = this.SelectedSolution.Projects.Except(new[] { project })
+                                              .Where(p => p.ReferencedProjects.Contains(project))
+                                              .ToArray();
             }
         }
 
