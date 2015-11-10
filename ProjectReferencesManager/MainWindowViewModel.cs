@@ -1,13 +1,13 @@
 ﻿using Microsoft.Win32;
 using ProjectReferencesManager.Model;
 using ProjectReferencesManager.Tools;
-using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System;
 
 namespace ProjectReferencesManager
 {
@@ -21,10 +21,10 @@ namespace ProjectReferencesManager
     public class MainWindowViewModel : INotifyPropertyChanged
     {
         private readonly CopyingManager copyingManager;
-        private Solution selectedSolution;
-        private Project selectedProject;
         private readonly ReferencesModifier modifier;
         private readonly ProjectFileReader projectReader;
+        private Solution selectedSolution;
+        private Project selectedProject;
 
         public MainWindowViewModel(ProjectFileReader projectReader, CopyingManager copingManager, ReferencesModifier modifier)
         {
@@ -35,6 +35,7 @@ namespace ProjectReferencesManager
             this.OpenSolutionCommand = new RelayCommand(this.OpenSolution);
             this.CopyProjectsCommand = new RelayCommandWithParameter(this.CopyProjects);
             this.PasteProjectsCommand = new RelayCommandWithParameter(this.PasteProjects, this.CanPasteProjects);
+            this.RemoveProjectsCommand = new RelayCommandWithParameter(this.RemoveProjects, this.CanRemoveProjects);
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -79,21 +80,79 @@ namespace ProjectReferencesManager
 
         public ICommand PasteProjectsCommand { get; private set; }
 
-        private bool CanPasteProjects(object projectsListBox)
+        public ICommand RemoveProjectsCommand { get; private set; }
+
+        private bool CanRemoveProjects(object projectsListBox)
         {
             if (projectsListBox == null)
             {
                 return false;
             }
 
-            var listType = (ProjectListType)(projectsListBox as ListBox).Tag;
+            var listType = this.GetProjectListType(projectsListBox);
+
+            return listType != ProjectListType.Solution;
+        }
+
+        private void RemoveProjects(object projectsListBox)
+        {
+            var projectsToRemove = (projectsListBox as ListBox).SelectedItems.OfType<IProject>();
+            var listType = this.GetProjectListType(projectsListBox);
+
+            switch (listType)
+            {
+                case ProjectListType.Referenced:
+
+                    this.RemoveFromReferenced(projectsToRemove);
+
+                    break;
+
+                case ProjectListType.Dependent:
+
+                    this.RemoveFromDependent(projectsToRemove);
+
+                    break;
+            }
+        }
+
+        private void RemoveFromReferenced(IEnumerable<IProject> projectsToRemove)
+        {
+            var newProjects = this.SelectedProject.ReferencedProjects.Except(projectsToRemove).ToArray();
+            var projectsToAdd = projectsToRemove.Where(p => p is Project || p is RemovedProject)
+                                                .Select(p => new RemovedProject(p));
+
+            this.SelectedProject.ReferencedProjects = newProjects.Concat(projectsToAdd).ToArray();
+        }
+
+        private void RemoveFromDependent(IEnumerable<IProject> projectsToRemove)
+        {
+            var newProjects = this.SelectedProject.DependentProjects.Except(projectsToRemove).ToArray();
+            var projectsToAdd = projectsToRemove.Where(p => p is Project || p is RemovedProject)
+                                                .Select(p => new RemovedProject(p));
+
+            this.SelectedProject.DependentProjects = newProjects.Concat(projectsToAdd).ToArray();
+        }
+
+        private ProjectListType GetProjectListType(object projectsListBox)
+        {
+            return (ProjectListType)(projectsListBox as ListBox).Tag;
+        }
+
+        private bool CanPasteProjects(object type)
+        {
+            if (type == null)
+            {
+                return false;
+            }
+
+            var listType = (ProjectListType)type;
 
             return this.copyingManager.HasData() && listType != ProjectListType.Solution;
         }
 
-        private void PasteProjects(object projectsListBox)
+        private void PasteProjects(object type)
         {
-            var listType = (ProjectListType)(projectsListBox as ListBox).Tag;
+            var listType = (ProjectListType)type;
 
             var newProjects = this.copyingManager.Paste();
 
@@ -101,17 +160,40 @@ namespace ProjectReferencesManager
             {
                 case ProjectListType.Referenced:
 
-                    var projectsToAdd = newProjects.Except(this.SelectedProject.ReferencedProjects)
-                                                   .Select(p => new NewProject(p));
-
-                    this.SelectedProject.ReferencedProjects = this.SelectedProject.ReferencedProjects.Concat(projectsToAdd).ToArray();
+                    this.AddToReferenced(newProjects);
 
                     break;
+
                 case ProjectListType.Dependent:
-                    break;
-                default:
+
+                    this.AddToDependent(newProjects);
+
                     break;
             }
+        }
+
+        private void AddToDependent(IEnumerable<IProject> newProjects)
+        {
+            var projectsToAdd = newProjects.Except(this.SelectedProject.DependentProjects)
+                                                      .Select(p => new AddedProject(p));
+
+            var projectsToRemove = this.SelectedProject.DependentProjects.Where(p => p is RemovedProject && projectsToAdd.Any(pp => pp.GUID == p.GUID));
+
+            this.SelectedProject.DependentProjects = this.SelectedProject.DependentProjects.Except(projectsToRemove)
+                                                                                           .Concat(projectsToAdd)
+                                                                                           .ToArray();
+        }
+
+        private void AddToReferenced(IEnumerable<IProject> newProjects)
+        {
+            var projectsToAdd = newProjects.Except(this.SelectedProject.ReferencedProjects)
+                                           .Select(p => new AddedProject(p));
+
+            var projectsToRemove = this.SelectedProject.ReferencedProjects.Where(p => p is RemovedProject && projectsToAdd.Any(pp => pp.GUID == p.GUID));
+
+            this.SelectedProject.ReferencedProjects = this.SelectedProject.ReferencedProjects.Except(projectsToRemove)
+                                                                                             .Concat(projectsToAdd)
+                                                                                             .ToArray();
         }
 
         private void CopyProjects(object projectsListBox)

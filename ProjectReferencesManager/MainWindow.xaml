@@ -15,6 +15,10 @@
                       CommandParameter="{Binding}" />
             <MenuItem Header="Paste"
                       Command="{Binding Path=DataContext.PasteProjectsCommand}"
+                      CommandParameter="{Binding Path=Tag}" />
+            <Separator />
+            <MenuItem Header="Remove"
+                      Command="{Binding Path=DataContext.RemoveProjectsCommand}"
                       CommandParameter="{Binding}" />
         </ContextMenu>
 
@@ -32,9 +36,16 @@
             </DockPanel>
         </DataTemplate>
 
-        <DataTemplate DataType="{x:Type model:NewProject}">
+        <DataTemplate DataType="{x:Type model:AddedProject}">
             <DockPanel>
                 <Image Source="Resources/Added.png" />
+                <TextBlock Text="{Binding Path=Name}" />
+            </DockPanel>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type model:RemovedProject}">
+            <DockPanel>
+                <Image Source="Resources/Removed.png" />
                 <TextBlock Text="{Binding Path=Name}" />
             </DockPanel>
         </DataTemplate>

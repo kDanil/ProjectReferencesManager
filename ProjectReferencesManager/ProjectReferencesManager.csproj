@@ -55,8 +55,9 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="Extensions\INotifyPropertyChangedExtensions.cs" />
-    <Compile Include="Model\NewProject.cs" />
+    <Compile Include="Model\AddedProject.cs" />
     <Compile Include="Model\Project.cs" />
+    <Compile Include="Model\RemovedProject.cs" />
     <Compile Include="RelayCommand.cs" />
     <Compile Include="Model\Solution.cs" />
     <Compile Include="RelayCommandWithParameter.cs" />

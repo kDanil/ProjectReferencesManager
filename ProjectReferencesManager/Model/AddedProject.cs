@@ -1,8 +1,8 @@
 ﻿namespace ProjectReferencesManager.Model
 {
-    public class NewProject : IProject
+    public class AddedProject : IProject
     {
-        public NewProject(IProject project)
+        public AddedProject(IProject project)
         {
             this.GUID = project.GUID;
             this.Name = project.Name;
