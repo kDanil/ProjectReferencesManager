@@ -3,10 +3,19 @@ using System.ComponentModel;
 
 namespace ProjectReferencesManager.Model
 {
-    public class Project : INotifyPropertyChanged
+    public interface IProject
     {
-        private IEnumerable<Project> referencedProjects;
-        private IEnumerable<Project> dependentProjects;
+        string GUID { get; }
+
+        string Name { get; }
+
+        string Path { get; }
+    }
+
+    public class Project : IProject, INotifyPropertyChanged
+    {
+        private IEnumerable<IProject> referencedProjects;
+        private IEnumerable<IProject> dependentProjects;
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -16,7 +25,7 @@ namespace ProjectReferencesManager.Model
 
         public string Path { get; set; }
 
-        public IEnumerable<Project> ReferencedProjects
+        public IEnumerable<IProject> ReferencedProjects
         {
             get
             {
@@ -33,7 +42,7 @@ namespace ProjectReferencesManager.Model
             }
         }
 
-        public IEnumerable<Project> DependentProjects
+        public IEnumerable<IProject> DependentProjects
         {
             get
             {

@@ -55,12 +55,16 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="Extensions\INotifyPropertyChangedExtensions.cs" />
+    <Compile Include="Model\NewProject.cs" />
     <Compile Include="Model\Project.cs" />
     <Compile Include="RelayCommand.cs" />
     <Compile Include="Model\Solution.cs" />
+    <Compile Include="RelayCommandWithParameter.cs" />
     <Compile Include="Tools\BindingErrorListener.cs" />
+    <Compile Include="Tools\CopyingManager.cs" />
     <Compile Include="Tools\GUIDFormatter.cs" />
     <Compile Include="Tools\ProjectFileReader.cs" />
+    <Compile Include="Tools\ReferencesModifier.cs" />
     <Compile Include="Tools\SolutionFileReader.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
@@ -102,6 +106,11 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\Added.png" />
+    <Resource Include="Resources\Normal.png" />
+    <Resource Include="Resources\Removed.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

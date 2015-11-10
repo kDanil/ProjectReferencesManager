@@ -6,6 +6,13 @@ namespace ProjectReferencesManager.Tools
 {
     public class ProjectFileReader
     {
+        public XElement ReadReferencesGroup(string filePath)
+        {
+            return XElement.Load(filePath)
+                             .Elements()
+                             .Single(e => e.Name.LocalName == "ItemGroup" && e.Elements().Any(ee => ee.Name.LocalName == "ProjectReference"));
+        }
+
         public IEnumerable<ProjectFileInfo> Read(string filePath)
         {
             return XElement.Load(filePath)

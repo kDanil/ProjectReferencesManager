@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using ProjectReferencesManager.Tools;
+using System.Windows;
 
 namespace ProjectReferencesManager
 {
@@ -8,7 +9,8 @@ namespace ProjectReferencesManager
         {
             InitializeComponent();
 
-            this.DataContext = new MainWindowViewModel();
+            var reader = new ProjectFileReader();
+            this.DataContext = new MainWindowViewModel(reader, new CopyingManager(), new ReferencesModifier(reader));
         }
     }
 }
