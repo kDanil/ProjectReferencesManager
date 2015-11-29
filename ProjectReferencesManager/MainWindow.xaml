@@ -5,6 +5,7 @@
         xmlns:model="clr-namespace:ProjectReferencesManager.Model"
         TextOptions.TextFormattingMode="Display"
         TextOptions.TextRenderingMode="Auto"
+        WindowStartupLocation="CenterScreen"
         UseLayoutRounding="True"
         Title="Visual studio project references manager">
     <Window.Resources>
@@ -19,6 +20,9 @@
             <Separator />
             <MenuItem Header="Remove"
                       Command="{Binding Path=DataContext.RemoveProjectsCommand}"
+                      CommandParameter="{Binding}" />            
+            <MenuItem Header="Restore"
+                      Command="{Binding Path=DataContext.RestoreProjectsCommand}"
                       CommandParameter="{Binding}" />
         </ContextMenu>
 
@@ -63,6 +67,20 @@
             <TextBlock  Margin="5"
                         VerticalAlignment="Center"
                         Text="{Binding Path=SelectedSolution.FullPath}" />
+        </StackPanel>
+        <StackPanel DockPanel.Dock="Top"              
+                   IsEnabled="{Binding Path=IsChanges}">
+            <DockPanel LastChildFill="False">
+                <TextBlock Text="Changes:"
+                           Margin="5" />
+                <TextBlock Text="{Binding Path=ChangesCount}"
+                           Margin="5" />
+            </DockPanel>
+            <Button Margin="5"
+                    HorizontalAlignment="Left"
+                    Width="75"
+                    Content="Apply"
+                    Command="{Binding Path=ApplyProjectChangesCommand}"/>
         </StackPanel>
         <Grid>
             <Grid.RowDefinitions>

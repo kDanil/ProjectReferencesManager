@@ -7,7 +7,6 @@ using System.IO;
 using System.Linq;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System;
 
 namespace ProjectReferencesManager
 {
@@ -23,8 +22,8 @@ namespace ProjectReferencesManager
         private readonly CopyingManager copyingManager;
         private readonly ReferencesModifier modifier;
         private readonly ProjectFileReader projectReader;
-        private Solution selectedSolution;
         private Project selectedProject;
+        private Solution selectedSolution;
 
         public MainWindowViewModel(ProjectFileReader projectReader, CopyingManager copingManager, ReferencesModifier modifier)
         {
@@ -33,31 +32,81 @@ namespace ProjectReferencesManager
             this.modifier = modifier;
 
             this.OpenSolutionCommand = new RelayCommand(this.OpenSolution);
-            this.CopyProjectsCommand = new RelayCommandWithParameter(this.CopyProjects);
-            this.PasteProjectsCommand = new RelayCommandWithParameter(this.PasteProjects, this.CanPasteProjects);
-            this.RemoveProjectsCommand = new RelayCommandWithParameter(this.RemoveProjects, this.CanRemoveProjects);
+            this.CopyProjectsCommand = new RelayCommandWithParameter(this.CopyProjects, this.CanCopyProjects);
+            this.PasteProjectsCommand = new RelayCommandWithParameter(p => { this.PasteProjects(p); this.RefreshChangesInformation(); }, this.CanPasteProjects);
+            this.RemoveProjectsCommand = new RelayCommandWithParameter(p => { this.RemoveProjects(p); this.RefreshChangesInformation(); }, this.CanRemoveProjects);
+            this.RestoreProjectsCommand = new RelayCommandWithParameter(p => { this.RestoreProjects(p); this.RefreshChangesInformation(); }, this.CanRestoreProjects);
+            this.ApplyProjectChangesCommand = new RelayCommand(() => { this.ApplyProjectChanges(); this.RefreshChangesInformation(); }, this.CanApplyProjectChanges);
+        }
+
+        private void RestoreProjects(object projectsListBox)
+        {
+            var listBox = projectsListBox as ListBox;
+            var listBoxType = (ProjectListType)listBox.Tag;
+
+            var removedProjects = listBox.SelectedItems.OfType<RemovedProject>();
+            var removedProjectGUIDs = removedProjects.Select(p => p.GUID).ToArray();
+            var projectsToAdd = this.SelectedSolution.Projects.Where(p => removedProjectGUIDs.Contains(p.GUID));
+
+            switch (listBoxType)
+            {
+                case ProjectListType.Referenced:
+                    this.SelectedProject.ReferencedProjects = this.SelectedProject.ReferencedProjects.Except(removedProjects)
+                                                                                                     .Concat(projectsToAdd)
+                                                                                                     .ToArray();
+                    break;
+                case ProjectListType.Dependent:
+                    this.SelectedProject.DependentProjects = this.SelectedProject.DependentProjects.Except(removedProjects)
+                                                                                                   .Concat(projectsToAdd)
+                                                                                                   .ToArray();
+                    break;
+            }
+        }
+
+        private bool CanRestoreProjects(object projectsListBox)
+        {
+            if (projectsListBox == null)
+            {
+                return false;
+            }
+
+            return (projectsListBox as ListBox).SelectedItems.OfType<RemovedProject>().Any();
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        public RelayCommand OpenSolutionCommand { get; private set; }
+        public RelayCommand ApplyProjectChangesCommand { get; private set; }
 
-        public Solution SelectedSolution
+        public int ChangesCount
         {
             get
             {
-                return this.selectedSolution;
-            }
-
-            set
-            {
-                if (this.selectedSolution != value)
+                if (this.SelectedSolution == null)
                 {
-                    this.selectedSolution = value;
-                    this.PropertyChanged.Raise(() => this.SelectedSolution);
+                    return default(int);
                 }
+
+                return this.GetChangedProjects().Count();
             }
         }
+
+        public ICommand CopyProjectsCommand { get; private set; }
+
+        public bool IsChanges
+        {
+            get
+            {
+                return this.ChangesCount > 0;
+            }
+        }
+
+        public RelayCommand OpenSolutionCommand { get; private set; }
+
+        public ICommand PasteProjectsCommand { get; private set; }
+
+        public ICommand RemoveProjectsCommand { get; private set; }
+
+        public RelayCommandWithParameter RestoreProjectsCommand { get; private set; }
 
         public Project SelectedProject
         {
@@ -76,99 +125,20 @@ namespace ProjectReferencesManager
             }
         }
 
-        public ICommand CopyProjectsCommand { get; private set; }
-
-        public ICommand PasteProjectsCommand { get; private set; }
-
-        public ICommand RemoveProjectsCommand { get; private set; }
-
-        private bool CanRemoveProjects(object projectsListBox)
+        public Solution SelectedSolution
         {
-            if (projectsListBox == null)
+            get
             {
-                return false;
+                return this.selectedSolution;
             }
 
-            var listType = this.GetProjectListType(projectsListBox);
-
-            return listType != ProjectListType.Solution;
-        }
-
-        private void RemoveProjects(object projectsListBox)
-        {
-            var projectsToRemove = (projectsListBox as ListBox).SelectedItems.OfType<IProject>();
-            var listType = this.GetProjectListType(projectsListBox);
-
-            switch (listType)
+            set
             {
-                case ProjectListType.Referenced:
-
-                    this.RemoveFromReferenced(projectsToRemove);
-
-                    break;
-
-                case ProjectListType.Dependent:
-
-                    this.RemoveFromDependent(projectsToRemove);
-
-                    break;
-            }
-        }
-
-        private void RemoveFromReferenced(IEnumerable<IProject> projectsToRemove)
-        {
-            var newProjects = this.SelectedProject.ReferencedProjects.Except(projectsToRemove).ToArray();
-            var projectsToAdd = projectsToRemove.Where(p => p is Project || p is RemovedProject)
-                                                .Select(p => new RemovedProject(p));
-
-            this.SelectedProject.ReferencedProjects = newProjects.Concat(projectsToAdd).ToArray();
-        }
-
-        private void RemoveFromDependent(IEnumerable<IProject> projectsToRemove)
-        {
-            var newProjects = this.SelectedProject.DependentProjects.Except(projectsToRemove).ToArray();
-            var projectsToAdd = projectsToRemove.Where(p => p is Project || p is RemovedProject)
-                                                .Select(p => new RemovedProject(p));
-
-            this.SelectedProject.DependentProjects = newProjects.Concat(projectsToAdd).ToArray();
-        }
-
-        private ProjectListType GetProjectListType(object projectsListBox)
-        {
-            return (ProjectListType)(projectsListBox as ListBox).Tag;
-        }
-
-        private bool CanPasteProjects(object type)
-        {
-            if (type == null)
-            {
-                return false;
-            }
-
-            var listType = (ProjectListType)type;
-
-            return this.copyingManager.HasData() && listType != ProjectListType.Solution;
-        }
-
-        private void PasteProjects(object type)
-        {
-            var listType = (ProjectListType)type;
-
-            var newProjects = this.copyingManager.Paste();
-
-            switch (listType)
-            {
-                case ProjectListType.Referenced:
-
-                    this.AddToReferenced(newProjects);
-
-                    break;
-
-                case ProjectListType.Dependent:
-
-                    this.AddToDependent(newProjects);
-
-                    break;
+                if (this.selectedSolution != value)
+                {
+                    this.selectedSolution = value;
+                    this.PropertyChanged.Raise(() => this.SelectedSolution);
+                }
             }
         }
 
@@ -196,9 +166,103 @@ namespace ProjectReferencesManager
                                                                                              .ToArray();
         }
 
+        private void ApplyProjectChanges()
+        {
+            var changes = this.GetChangedProjects();
+        }
+
+        private bool CanApplyProjectChanges()
+        {
+            return this.IsChanges;
+        }
+
+        private bool CanCopyProjects(object projectsListBox)
+        {
+            if (projectsListBox == null)
+            {
+                return false;
+            }
+
+            return (projectsListBox as ListBox).SelectedItems.OfType<IProject>().Any(p => p is Project);
+        }
+
+        private bool CanPasteProjects(object type)
+        {
+            if (type == null)
+            {
+                return false;
+            }
+
+            var listType = (ProjectListType)type;
+
+            return this.copyingManager.HasData() && listType != ProjectListType.Solution;
+        }
+
+        private bool CanRemoveProjects(object projectsListBox)
+        {
+            if (projectsListBox == null)
+            {
+                return false;
+            }
+
+            var listType = this.GetProjectListType(projectsListBox);
+
+            var selectedProject = (projectsListBox as ListBox).SelectedItem;
+
+            return listType != ProjectListType.Solution && selectedProject is Project || selectedProject is AddedProject;
+        }
+
         private void CopyProjects(object projectsListBox)
         {
-            this.copyingManager.Copy((projectsListBox as ListBox).SelectedItems.OfType<IProject>());
+            this.copyingManager.Copy((projectsListBox as ListBox).SelectedItems.OfType<Project>());
+        }
+
+        private void FindDependentProjects()
+        {
+            foreach (var project in this.SelectedSolution.Projects)
+            {
+                project.DependentProjects = this.SelectedSolution.Projects.Except(new[] { project })
+                                              .Where(p => p.ReferencedProjects.Contains(project))
+                                              .ToArray();
+            }
+        }
+
+        private string GetAbsoluteProjectPath(IProject project)
+        {
+            return this.SelectedSolution.FolderPath + Path.DirectorySeparatorChar + project.Path;
+        }
+
+        private IEnumerable<IProject> GetChangedProjects()
+        {
+            var dependentProjects = this.SelectedSolution.Projects.SelectMany(p => p.DependentProjects.Where(pr => pr is AddedProject || pr is RemovedProject));
+            var referencedProjects = this.SelectedSolution.Projects.SelectMany(p => p.ReferencedProjects.Where(pr => pr is AddedProject || pr is RemovedProject));
+
+            return dependentProjects.Concat(referencedProjects);
+        }
+
+        private ProjectListType GetProjectListType(object projectsListBox)
+        {
+            return (ProjectListType)(projectsListBox as ListBox).Tag;
+        }
+
+        private void LoadProjectReferences()
+        {
+            foreach (var project in this.SelectedSolution.Projects)
+            {
+                this.LoadReferencedProjects(project);
+            }
+        }
+
+        private IEnumerable<Project> LoadProjects(string filePath)
+        {
+            return new SolutionFileReader().Read(filePath)
+                                           .Select(p => new Project()
+                                           {
+                                               Name = p.Name,
+                                               Path = p.Path,
+                                               GUID = p.GUID
+                                           }).OrderBy(p => p.Name)
+                                           .ToArray();
         }
 
         private void LoadReferencedProjects(Project project)
@@ -210,11 +274,6 @@ namespace ProjectReferencesManager
             project.ReferencedProjects = this.SelectedSolution.Projects.Where(p => guids.Contains(p.GUID))
                                                                                     .OrderBy(p => p.Name)
                                                                                     .ToArray();
-        }
-
-        private string GetAbsoluteProjectPath(IProject project)
-        {
-            return this.SelectedSolution.FolderPath + Path.DirectorySeparatorChar + project.Path;
         }
 
         private void OpenSolution()
@@ -236,34 +295,67 @@ namespace ProjectReferencesManager
             }
         }
 
-        private void FindDependentProjects()
+        private void PasteProjects(object type)
         {
-            foreach (var project in this.SelectedSolution.Projects)
+            var listType = (ProjectListType)type;
+
+            var newProjects = this.copyingManager.Paste();
+
+            switch (listType)
             {
-                project.DependentProjects = this.SelectedSolution.Projects.Except(new[] { project })
-                                              .Where(p => p.ReferencedProjects.Contains(project))
-                                              .ToArray();
+                case ProjectListType.Referenced:
+
+                    this.AddToReferenced(newProjects);
+
+                    break;
+
+                case ProjectListType.Dependent:
+
+                    this.AddToDependent(newProjects);
+
+                    break;
             }
         }
 
-        private void LoadProjectReferences()
+        private void RefreshChangesInformation()
         {
-            foreach (var project in this.SelectedSolution.Projects)
-            {
-                this.LoadReferencedProjects(project);
-            }
+            this.PropertyChanged.Raise(() => this.ChangesCount);
+            this.PropertyChanged.Raise(() => this.IsChanges);
         }
 
-        private IEnumerable<Project> LoadProjects(string filePath)
+        private void RemoveFromDependent(IEnumerable<IProject> projectsToRemove)
         {
-            return new SolutionFileReader().Read(filePath)
-                                           .Select(p => new Project()
-                                           {
-                                               Name = p.Name,
-                                               Path = p.Path,
-                                               GUID = p.GUID
-                                           }).OrderBy(p => p.Name)
-                                           .ToArray();
+            var newProjects = this.SelectedProject.DependentProjects.Except(projectsToRemove).ToArray();
+            var projectsToAdd = projectsToRemove.Where(p => p is Project || p is RemovedProject)
+                                                .Select(p => new RemovedProject(p));
+
+            this.SelectedProject.DependentProjects = newProjects.Concat(projectsToAdd).ToArray();
+        }
+
+        private void RemoveFromReferenced(IEnumerable<IProject> projectsToRemove)
+        {
+            var newProjects = this.SelectedProject.ReferencedProjects.Except(projectsToRemove).ToArray();
+            var projectsToAdd = projectsToRemove.Where(p => p is Project || p is RemovedProject)
+                                                .Select(p => new RemovedProject(p));
+
+            this.SelectedProject.ReferencedProjects = newProjects.Concat(projectsToAdd).ToArray();
+        }
+
+        private void RemoveProjects(object projectsListBox)
+        {
+            var projectsToRemove = (projectsListBox as ListBox).SelectedItems.OfType<IProject>();
+            var listType = this.GetProjectListType(projectsListBox);
+
+            switch (listType)
+            {
+                case ProjectListType.Referenced:
+                    this.RemoveFromReferenced(projectsToRemove);
+                    break;
+
+                case ProjectListType.Dependent:
+                    this.RemoveFromDependent(projectsToRemove);
+                    break;
+            }
         }
     }
 }
