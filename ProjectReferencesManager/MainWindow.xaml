@@ -20,7 +20,7 @@
             <Separator />
             <MenuItem Header="Remove"
                       Command="{Binding Path=DataContext.RemoveProjectsCommand}"
-                      CommandParameter="{Binding}" />            
+                      CommandParameter="{Binding}" />
             <MenuItem Header="Restore"
                       Command="{Binding Path=DataContext.RestoreProjectsCommand}"
                       CommandParameter="{Binding}" />
@@ -55,33 +55,47 @@
         </DataTemplate>
     </Window.Resources>
     <DockPanel>
-        <StackPanel DockPanel.Dock="Top"
-                    Orientation="Horizontal">
+        <Grid DockPanel.Dock="Top"
+              Grid.IsSharedSizeScope="True">
+            <Grid.RowDefinitions>
+                <RowDefinition />
+                <RowDefinition />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"
+                                  SharedSizeGroup="Label" />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
             <TextBlock Margin="5"
                        VerticalAlignment="Center"
                        Text="Open solution:" />
-            <Button Margin="5"
-                    Width="80"
-                    Content="Browse"
-                    Command="{Binding Path=OpenSolutionCommand}" />
-            <TextBlock  Margin="5"
-                        VerticalAlignment="Center"
-                        Text="{Binding Path=SelectedSolution.FullPath}" />
-        </StackPanel>
-        <StackPanel DockPanel.Dock="Top"              
-                   IsEnabled="{Binding Path=IsChanges}">
-            <DockPanel LastChildFill="False">
-                <TextBlock Text="Changes:"
-                           Margin="5" />
-                <TextBlock Text="{Binding Path=ChangesCount}"
-                           Margin="5" />
-            </DockPanel>
-            <Button Margin="5"
-                    HorizontalAlignment="Left"
-                    Width="75"
-                    Content="Apply"
-                    Command="{Binding Path=ApplyProjectChangesCommand}"/>
-        </StackPanel>
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal">
+                <Button Margin="5"
+                        Width="80"
+                        Content="Browse"
+                        Command="{Binding Path=OpenSolutionCommand}" />
+                <TextBlock  Margin="5"
+                            VerticalAlignment="Center"
+                            Text="{Binding Path=SelectedSolution.FullPath}" />
+            </StackPanel>
+            <TextBlock Grid.Row="1"
+                       Text="Changes:"
+                       Margin="5" />
+            <StackPanel Grid.Row="1"
+                        Grid.Column="1"
+                        IsEnabled="{Binding Path=IsChanges}">
+                <DockPanel LastChildFill="False">
+                    <TextBlock Text="{Binding Path=ChangesCount}"
+                               Margin="5" />
+                </DockPanel>
+                <Button Margin="5"
+                        HorizontalAlignment="Left"
+                        Width="75"
+                        Content="Apply"
+                        Command="{Binding Path=ApplyProjectChangesCommand}" />
+            </StackPanel>
+        </Grid>
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
