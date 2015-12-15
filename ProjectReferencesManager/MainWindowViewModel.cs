@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System;
 
 namespace ProjectReferencesManager
 {
@@ -168,7 +169,30 @@ namespace ProjectReferencesManager
 
         private void ApplyProjectChanges()
         {
-            var changes = this.GetChangedProjects();
+            foreach (var project in this.SelectedSolution.Projects.Where(p => p.DependentProjects.Any(pr => this.IsChangedProject(pr)) || p.ReferencedProjects.Any(pr => this.IsChangedProject(pr))))
+            {
+
+                this.ApplyDependentProjectChanges(project);
+
+                this.ApplyReferencedProjectChanges(project);
+
+            }
+        }
+
+        private void ApplyReferencedProjectChanges(Project project)
+        {
+            var changedProjects = project.ReferencedProjects.Where(p => this.IsChangedProject(p));
+
+            this.modifier.AddReference(this.GetAbsoluteProjectPath(project), this.GetPathDepth(project.Path), changedProjects.OfType<AddedProject>());
+
+            project.ReferencedProjects = project.ReferencedProjects.Except(changedProjects).ToArray();
+        }
+
+        private void ApplyDependentProjectChanges(Project project)
+        {
+            var changedProjects = project.ReferencedProjects.Where(p => this.IsChangedProject(p));
+
+            project.DependentProjects = project.DependentProjects.Except(changedProjects).ToArray();
         }
 
         private bool CanApplyProjectChanges()
@@ -232,12 +256,22 @@ namespace ProjectReferencesManager
             return this.SelectedSolution.FolderPath + Path.DirectorySeparatorChar + project.Path;
         }
 
+        private int GetPathDepth(string path)
+        {
+            return path.Split(Path.DirectorySeparatorChar).Length - 1;
+        }
+
         private IEnumerable<IProject> GetChangedProjects()
         {
-            var dependentProjects = this.SelectedSolution.Projects.SelectMany(p => p.DependentProjects.Where(pr => pr is AddedProject || pr is RemovedProject));
-            var referencedProjects = this.SelectedSolution.Projects.SelectMany(p => p.ReferencedProjects.Where(pr => pr is AddedProject || pr is RemovedProject));
+            var dependentProjects = this.SelectedSolution.Projects.SelectMany(p => p.DependentProjects.Where(pr => this.IsChangedProject(pr)));
+            var referencedProjects = this.SelectedSolution.Projects.SelectMany(p => p.ReferencedProjects.Where(pr => this.IsChangedProject(pr)));
 
             return dependentProjects.Concat(referencedProjects);
+        }
+
+        private bool IsChangedProject(IProject project)
+        {
+            return project is AddedProject || project is RemovedProject;
         }
 
         private ProjectListType GetProjectListType(object projectsListBox)

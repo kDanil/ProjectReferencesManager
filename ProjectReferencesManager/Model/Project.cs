@@ -14,8 +14,8 @@ namespace ProjectReferencesManager.Model
 
     public class Project : IProject, INotifyPropertyChanged
     {
-        private IList<IProject> referencedProjects;
-        private IList<IProject> dependentProjects;
+        private IEnumerable<IProject> referencedProjects;
+        private IEnumerable<IProject> dependentProjects;
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -25,7 +25,7 @@ namespace ProjectReferencesManager.Model
 
         public string Path { get; set; }
 
-        public IList<IProject> ReferencedProjects
+        public IEnumerable<IProject> ReferencedProjects
         {
             get
             {
@@ -42,7 +42,7 @@ namespace ProjectReferencesManager.Model
             }
         }
 
-        public IList<IProject> DependentProjects
+        public IEnumerable<IProject> DependentProjects
         {
             get
             {
