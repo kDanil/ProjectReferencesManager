@@ -181,11 +181,21 @@ namespace ProjectReferencesManager
 
         private void ApplyReferencedProjectChanges(Project project)
         {
-            var changedProjects = project.ReferencedProjects.Where(p => this.IsChangedProject(p));
+            var addedProjects = this.GetFilteredProjects<AddedProject>(project.ReferencedProjects);
+            var removedProjects = this.GetFilteredProjects<RemovedProject>(project.ReferencedProjects);
 
-            this.modifier.AddReference(this.GetAbsoluteProjectPath(project), this.GetPathDepth(project.Path), changedProjects.OfType<AddedProject>());
+            this.modifier.AddReference(this.GetAbsoluteProjectPath(project), this.GetPathDepth(project.Path), addedProjects);
+            this.modifier.RemoveReference(this.GetAbsoluteProjectPath(project), removedProjects);
 
-            project.ReferencedProjects = project.ReferencedProjects.Except(changedProjects).ToArray();
+            project.ReferencedProjects = project.ReferencedProjects.Except(removedProjects)
+                                                                   .Except(addedProjects)
+                                                                   .Concat(this.FindAddedProjects(addedProjects))
+                                                                   .ToArray();
+        }
+
+        private IEnumerable<IProject> FindAddedProjects(IEnumerable<AddedProject> addedProjects)
+        {
+            return this.SelectedSolution.Projects.Where(p => addedProjects.Any(ap => ap.GUID == p.GUID));
         }
 
         private void ApplyDependentProjectChanges(Project project)
@@ -267,6 +277,11 @@ namespace ProjectReferencesManager
             var referencedProjects = this.SelectedSolution.Projects.SelectMany(p => p.ReferencedProjects.Where(pr => this.IsChangedProject(pr)));
 
             return dependentProjects.Concat(referencedProjects);
+        }
+
+        private IEnumerable<T> GetFilteredProjects<T>(IEnumerable<IProject> projects) where T : IProject
+        {
+            return projects.Where(pr => this.IsChangedProject(pr)).OfType<T>();
         }
 
         private bool IsChangedProject(IProject project)

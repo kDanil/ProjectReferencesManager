@@ -1,11 +1,9 @@
-﻿using System;
+﻿using ProjectReferencesManager.Model;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using ProjectReferencesManager.Model;
-using System.Xml.Linq;
 using System.IO;
+using System.Linq;
+using System.Xml.Linq;
+using System;
 
 namespace ProjectReferencesManager.Tools
 {
@@ -29,7 +27,7 @@ namespace ProjectReferencesManager.Tools
             {
                 var projectReference = new XElement("ProjectReference", new XAttribute("Include", solutionRelativePath + project.Path));
                 var projectItem = new XElement("Project");
-                projectItem.SetValue(project.GUID);
+                projectItem.SetValue("{" + project.GUID + "}");
                 var name = new XElement("Name");
                 name.SetValue(project.Name);
 
@@ -40,6 +38,23 @@ namespace ProjectReferencesManager.Tools
             }
 
             root.Save(projectPath);
+        }
+
+        internal void RemoveReference(string projectPath, IEnumerable<RemovedProject> removedProjects)
+        {
+            var root = this.reader.ReadDocument(projectPath);
+            var elementGroup = this.reader.ReadReferencesGroup(root);
+
+            elementGroup.Elements()
+                        .Where(e => this.IsProjectToRemove(removedProjects, e))
+                        .Remove();
+
+            root.Save(projectPath);
+        }
+
+        private bool IsProjectToRemove(IEnumerable<RemovedProject> removedProjects, XElement e)
+        {
+            return e.Name.LocalName == "ProjectReference" && e.Elements().Any(n => n.Name.LocalName == "Project" && removedProjects.Any(p => p.GUID == GUIDFormatter.Format(n.Value)));
         }
     }
 }
