@@ -204,9 +204,18 @@ namespace ProjectReferencesManager
 
         private void ApplyDependentProjectChanges(Project project)
         {
-            var changedProjects = project.ReferencedProjects.Where(p => this.IsChangedProject(p));
+            var addedProjects = this.GetFilteredProjects<AddedProject>(project.DependentProjects);
+            var removedProjects = this.GetFilteredProjects<RemovedProject>(project.DependentProjects);
 
-            project.DependentProjects = project.DependentProjects.Except(changedProjects).ToArray();
+            foreach (var addedProject in addedProjects)
+            {
+                this.modifier.AddReference(this.GetAbsoluteProjectPath(addedProject), this.GetPathDepth(addedProject.Path), new[] { project });
+            }
+
+            project.DependentProjects = project.DependentProjects.Except(removedProjects)
+                                                                 .Except(addedProjects)
+                                                                 .Concat(this.FindOriginalProjects(addedProjects))
+                                                                 .ToArray();
         }
 
         private bool CanApplyProjectChanges()

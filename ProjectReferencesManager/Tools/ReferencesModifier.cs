@@ -16,7 +16,7 @@ namespace ProjectReferencesManager.Tools
             this.reader = reader;
         }
 
-        internal void AddReference(string projectPath, int depth, IEnumerable<AddedProject> newProjects)
+        internal void AddReference(string projectPath, int depth, IEnumerable<IProject> newProjects)
         {
             var root = this.reader.ReadDocument(projectPath);
             var elementGroup = this.reader.ReadReferencesGroup(root);
