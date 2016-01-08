@@ -8,6 +8,7 @@ using System.Linq;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System;
+using System.Windows;
 
 namespace ProjectReferencesManager
 {
@@ -171,11 +172,9 @@ namespace ProjectReferencesManager
         {
             foreach (var project in this.SelectedSolution.Projects.Where(p => p.DependentProjects.Any(pr => this.IsChangedProject(pr)) || p.ReferencedProjects.Any(pr => this.IsChangedProject(pr))))
             {
-
                 this.ApplyDependentProjectChanges(project);
 
                 this.ApplyReferencedProjectChanges(project);
-
             }
         }
 
@@ -189,13 +188,18 @@ namespace ProjectReferencesManager
 
             project.ReferencedProjects = project.ReferencedProjects.Except(removedProjects)
                                                                    .Except(addedProjects)
-                                                                   .Concat(this.FindAddedProjects(addedProjects))
+                                                                   .Concat(this.FindOriginalProjects(addedProjects))
                                                                    .ToArray();
         }
 
-        private IEnumerable<IProject> FindAddedProjects(IEnumerable<AddedProject> addedProjects)
+        private Project FindOriginalProject(IProject project)
         {
-            return this.SelectedSolution.Projects.Where(p => addedProjects.Any(ap => ap.GUID == p.GUID));
+            return this.FindOriginalProjects(new[] { project }).Single();
+        }
+
+        private IEnumerable<Project> FindOriginalProjects(IEnumerable<IProject> projects)
+        {
+            return this.SelectedSolution.Projects.Where(p => projects.Any(ap => ap.GUID == p.GUID));
         }
 
         private void ApplyDependentProjectChanges(Project project)
@@ -350,19 +354,42 @@ namespace ProjectReferencesManager
 
             var newProjects = this.copyingManager.Paste();
 
+            bool isCircular = false;
+
             switch (listType)
             {
                 case ProjectListType.Referenced:
 
-                    this.AddToReferenced(newProjects);
+                    if (!this.SelectedProject.DependentProjects.Any(p => !this.IsChangedProject(p) && newProjects.Any(np => np.GUID == p.GUID)))
+                    {
+                        this.AddToReferenced(newProjects);
+                    }
+                    else
+                    {
+                        isCircular = true;
+                    }
 
                     break;
 
                 case ProjectListType.Dependent:
 
-                    this.AddToDependent(newProjects);
+                    if (!this.SelectedProject.ReferencedProjects.Any(p => !this.IsChangedProject(p) && newProjects.Any(np => np.GUID == p.GUID)))
+                    {
+                        this.AddToDependent(newProjects);
+                    }
+                    else
+                    {
+                        isCircular = true;
+                    }
 
                     break;
+            }
+
+            if (isCircular)
+            {
+                MessageBox.Show("Circular reference detected", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+
+                this.copyingManager.Copy(newProjects);
             }
         }
 
