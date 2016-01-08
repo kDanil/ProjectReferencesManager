@@ -23,11 +23,11 @@ namespace ProjectReferencesManager.Tools
             var root = this.reader.ReadDocument(projectPath);
             var elementGroup = this.reader.ReadReferencesGroup(root);
 
-            var solutionRelativePath = string.Join(Path.DirectorySeparatorChar.ToString(), Enumerable.Range(0, depth).Select(i => Path.DirectorySeparatorChar + ".."));
+            var solutionRelativePath = string.Join("", Enumerable.Range(0, depth).Select(i => ".." + Path.DirectorySeparatorChar));
 
             foreach (var project in newProjects)
             {
-                var projectReference = new XElement("ProjectReference", new XAttribute("Include", solutionRelativePath + Path.DirectorySeparatorChar + project.Path));
+                var projectReference = new XElement("ProjectReference", new XAttribute("Include", solutionRelativePath + project.Path));
                 var projectItem = new XElement("Project");
                 projectItem.SetValue(project.GUID);
                 var name = new XElement("Name");
