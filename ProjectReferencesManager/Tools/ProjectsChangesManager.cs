@@ -8,10 +8,14 @@ namespace ProjectReferencesManager.Tools
     {
         private readonly ReferencesModifier modifier;
         private Solution solution;
+        private readonly CopyingManager copyingManager;
+        private readonly UserInteraction interaction;
 
-        public ProjectsChangesManager(ReferencesModifier modifier)
+        public ProjectsChangesManager(ReferencesModifier modifier, CopyingManager copyingManager, UserInteraction interaction)
         {
             this.modifier = modifier;
+            this.copyingManager = copyingManager;
+            this.interaction = interaction;
         }
 
         public void AssignSolution(Solution solution)
@@ -49,6 +53,73 @@ namespace ProjectReferencesManager.Tools
                                                                                                    .ToArray();
                     break;
             }
+        }
+
+        public void PasteProjects(Project targetProject, ProjectListType type)
+        {
+            var newProjects = this.copyingManager.Paste();
+
+            bool isCircular = false;
+
+            switch (type)
+            {
+                case ProjectListType.Referenced:
+
+                    if (!targetProject.DependentProjects.Any(p => !p.IsChangedProject() && newProjects.Any(np => np.GUID == p.GUID)))
+                    {
+                        this.AddToReferenced(targetProject,newProjects);
+                    }
+                    else
+                    {
+                        isCircular = true;
+                    }
+
+                    break;
+
+                case ProjectListType.Dependent:
+
+                    if (!targetProject.ReferencedProjects.Any(p => !p.IsChangedProject() && newProjects.Any(np => np.GUID == p.GUID)))
+                    {
+                        this.AddToDependent(targetProject, newProjects);
+                    }
+                    else
+                    {
+                        isCircular = true;
+                    }
+
+                    break;
+            }
+
+            if (isCircular)
+            {
+                this.interaction.ShowError("Circular reference detected");
+
+                this.copyingManager.Copy(newProjects);
+            }
+        }
+
+        private void AddToDependent(Project targetProject, IEnumerable<IProject> newProjects)
+        {
+            var projectsToAdd = newProjects.Except(targetProject.DependentProjects)
+                                                      .Select(p => new AddedProject(p));
+
+            var projectsToRemove = targetProject.DependentProjects.Where(p => p is RemovedProject && projectsToAdd.Any(pp => pp.GUID == p.GUID));
+
+            targetProject.DependentProjects = targetProject.DependentProjects.Except(projectsToRemove)
+                                                                                           .Concat(projectsToAdd)
+                                                                                           .ToArray();
+        }
+
+        private void AddToReferenced(Project targetProject, IEnumerable<IProject> newProjects)
+        {
+            var projectsToAdd = newProjects.Except(targetProject.ReferencedProjects)
+                                           .Select(p => new AddedProject(p));
+
+            var projectsToRemove = targetProject.ReferencedProjects.Where(p => p is RemovedProject && projectsToAdd.Any(pp => pp.GUID == p.GUID));
+
+            targetProject.ReferencedProjects = targetProject.ReferencedProjects.Except(projectsToRemove)
+                                                                                             .Concat(projectsToAdd)
+                                                                                             .ToArray();
         }
 
         private void ApplyReferencedProjectChanges(Project project)

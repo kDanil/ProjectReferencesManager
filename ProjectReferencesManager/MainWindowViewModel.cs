@@ -4,27 +4,25 @@ using ProjectReferencesManager.Tools;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Windows;
 using System.Windows.Controls;
-using System;
 
 namespace ProjectReferencesManager
 {
     public class MainWindowViewModel : INotifyPropertyChanged
     {
         private readonly CopyingManager copyingManager;
-        private Project selectedProject;
-        private Solution selectedSolution;
         private readonly ProjectsChangesManager changesManager;
         private readonly SolutionLoader solutionLoader;
+        private Project selectedProject;
+        private Solution selectedSolution;
 
         public MainWindowViewModel(
             SolutionLoader solutionLoader,
-            CopyingManager copingManager,
+            CopyingManager copyingManager,
             ProjectsChangesManager changesManager)
         {
             this.solutionLoader = solutionLoader;
-            this.copyingManager = copingManager;
+            this.copyingManager = copyingManager;
             this.changesManager = changesManager;
 
             this.Commands = new MainWindowCommands();
@@ -35,15 +33,6 @@ namespace ProjectReferencesManager
             this.Commands.RemoveProjectsCommand = new RelayCommandWithParameter(p => { this.RemoveProjects(p); this.RefreshChangesInformation(); }, this.CanRemoveProjects);
             this.Commands.RestoreProjectsCommand = new RelayCommandWithParameter(p => { this.RestoreProjects(p); this.RefreshChangesInformation(); }, this.CanRestoreProjects);
             this.Commands.ApplyProjectChangesCommand = new RelayCommand(() => { this.ApplyProjectChanges(); this.RefreshChangesInformation(); }, this.CanApplyProjectChanges);
-        }
-
-        private void RestoreProjects(object projectsListBox)
-        {
-            var listBox = projectsListBox as ListBox;
-            var listBoxType = (ProjectListType)listBox.Tag;
-            var removedProjects = listBox.SelectedItems.OfType<RemovedProject>();
-
-            this.changesManager.RestoreProjects(this.SelectedProject, removedProjects, listBoxType);
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -108,6 +97,20 @@ namespace ProjectReferencesManager
             }
         }
 
+        private void PasteProjects(object type)
+        {
+            this.changesManager.PasteProjects(this.SelectedProject, (ProjectListType)type);
+        }
+
+        private void RestoreProjects(object projectsListBox)
+        {
+            var listBox = projectsListBox as ListBox;
+            var listBoxType = (ProjectListType)listBox.Tag;
+            var removedProjects = listBox.SelectedItems.OfType<RemovedProject>();
+
+            this.changesManager.RestoreProjects(this.SelectedProject, removedProjects, listBoxType);
+        }
+
         private bool CanRestoreProjects(object projectsListBox)
         {
             if (projectsListBox == null)
@@ -116,30 +119,6 @@ namespace ProjectReferencesManager
             }
 
             return (projectsListBox as ListBox).SelectedItems.OfType<RemovedProject>().Any();
-        }
-
-        private void AddToDependent(IEnumerable<IProject> newProjects)
-        {
-            var projectsToAdd = newProjects.Except(this.SelectedProject.DependentProjects)
-                                                      .Select(p => new AddedProject(p));
-
-            var projectsToRemove = this.SelectedProject.DependentProjects.Where(p => p is RemovedProject && projectsToAdd.Any(pp => pp.GUID == p.GUID));
-
-            this.SelectedProject.DependentProjects = this.SelectedProject.DependentProjects.Except(projectsToRemove)
-                                                                                           .Concat(projectsToAdd)
-                                                                                           .ToArray();
-        }
-
-        private void AddToReferenced(IEnumerable<IProject> newProjects)
-        {
-            var projectsToAdd = newProjects.Except(this.SelectedProject.ReferencedProjects)
-                                           .Select(p => new AddedProject(p));
-
-            var projectsToRemove = this.SelectedProject.ReferencedProjects.Where(p => p is RemovedProject && projectsToAdd.Any(pp => pp.GUID == p.GUID));
-
-            this.SelectedProject.ReferencedProjects = this.SelectedProject.ReferencedProjects.Except(projectsToRemove)
-                                                                                             .Concat(projectsToAdd)
-                                                                                             .ToArray();
         }
 
         private void ApplyProjectChanges()
@@ -193,8 +172,6 @@ namespace ProjectReferencesManager
             this.copyingManager.Copy((projectsListBox as ListBox).SelectedItems.OfType<Project>());
         }
 
-
-
         private IEnumerable<IProject> GetChangedProjects()
         {
             var dependentProjects = this.SelectedSolution.Projects.SelectMany(p => p.DependentProjects.Where(pr => pr.IsChangedProject()));
@@ -217,51 +194,6 @@ namespace ProjectReferencesManager
             if (dialog.ShowDialog() == true)
             {
                 this.SelectedSolution = this.solutionLoader.Load(dialog.FileName);
-            }
-        }
-
-        private void PasteProjects(object type)
-        {
-            var listType = (ProjectListType)type;
-
-            var newProjects = this.copyingManager.Paste();
-
-            bool isCircular = false;
-
-            switch (listType)
-            {
-                case ProjectListType.Referenced:
-
-                    if (!this.SelectedProject.DependentProjects.Any(p => !p.IsChangedProject() && newProjects.Any(np => np.GUID == p.GUID)))
-                    {
-                        this.AddToReferenced(newProjects);
-                    }
-                    else
-                    {
-                        isCircular = true;
-                    }
-
-                    break;
-
-                case ProjectListType.Dependent:
-
-                    if (!this.SelectedProject.ReferencedProjects.Any(p => !p.IsChangedProject() && newProjects.Any(np => np.GUID == p.GUID)))
-                    {
-                        this.AddToDependent(newProjects);
-                    }
-                    else
-                    {
-                        isCircular = true;
-                    }
-
-                    break;
-            }
-
-            if (isCircular)
-            {
-                MessageBox.Show("Circular reference detected", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-
-                this.copyingManager.Copy(newProjects);
             }
         }
 

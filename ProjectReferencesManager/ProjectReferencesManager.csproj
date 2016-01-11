@@ -72,6 +72,7 @@
     <Compile Include="Tools\ReferencesModifier.cs" />
     <Compile Include="Tools\SolutionFileReader.cs" />
     <Compile Include="Tools\SolutionLoader.cs" />
+    <Compile Include="Tools\UserInteraction.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
