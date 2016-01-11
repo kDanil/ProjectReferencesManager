@@ -12,17 +12,17 @@
         <ContextMenu x:Key="ContextMenu"
                      DataContext="{Binding Path=PlacementTarget, RelativeSource={RelativeSource Mode=Self}}">
             <MenuItem Header="Copy"
-                      Command="{Binding Path=DataContext.CopyProjectsCommand}"
+                      Command="{Binding Path=DataContext.Commands.CopyProjectsCommand}"
                       CommandParameter="{Binding}" />
             <MenuItem Header="Paste"
-                      Command="{Binding Path=DataContext.PasteProjectsCommand}"
+                      Command="{Binding Path=DataContext.Commands.PasteProjectsCommand}"
                       CommandParameter="{Binding Path=Tag}" />
             <Separator />
             <MenuItem Header="Remove"
-                      Command="{Binding Path=DataContext.RemoveProjectsCommand}"
+                      Command="{Binding Path=DataContext.Commands.RemoveProjectsCommand}"
                       CommandParameter="{Binding}" />
             <MenuItem Header="Restore"
-                      Command="{Binding Path=DataContext.RestoreProjectsCommand}"
+                      Command="{Binding Path=DataContext.Commands.RestoreProjectsCommand}"
                       CommandParameter="{Binding}" />
         </ContextMenu>
 
@@ -74,7 +74,7 @@
                 <Button Margin="5"
                         Width="80"
                         Content="Browse"
-                        Command="{Binding Path=OpenSolutionCommand}" />
+                        Command="{Binding Path=Commands.OpenSolutionCommand}" />
                 <TextBlock  Margin="5"
                             VerticalAlignment="Center"
                             Text="{Binding Path=SelectedSolution.FullPath}" />
@@ -93,7 +93,7 @@
                         HorizontalAlignment="Left"
                         Width="75"
                         Content="Apply"
-                        Command="{Binding Path=ApplyProjectChangesCommand}" />
+                        Command="{Binding Path=Commands.ApplyProjectChangesCommand}" />
             </StackPanel>
         </Grid>
         <Grid>

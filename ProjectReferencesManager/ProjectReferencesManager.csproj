@@ -55,12 +55,14 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="Extensions\INotifyPropertyChangedExtensions.cs" />
+    <Compile Include="MainWindowCommands.cs" />
     <Compile Include="Model\AddedProject.cs" />
     <Compile Include="Model\Project.cs" />
     <Compile Include="Model\RemovedProject.cs" />
-    <Compile Include="RelayCommand.cs" />
+    <Compile Include="Model\ProjectListType.cs" />
+    <Compile Include="Tools\RelayCommand.cs" />
     <Compile Include="Model\Solution.cs" />
-    <Compile Include="RelayCommandWithParameter.cs" />
+    <Compile Include="Tools\RelayCommandWithParameter.cs" />
     <Compile Include="Tools\BindingErrorListener.cs" />
     <Compile Include="Tools\CopyingManager.cs" />
     <Compile Include="Tools\GUIDFormatter.cs" />

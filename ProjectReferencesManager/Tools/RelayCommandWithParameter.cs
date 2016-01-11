@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Windows.Input;
 
-namespace ProjectReferencesManager
+namespace ProjectReferencesManager.Tools
 {
     public class RelayCommandWithParameter : ICommand
     {

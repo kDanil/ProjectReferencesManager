@@ -5,20 +5,11 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
-using System.Windows.Controls;
-using System.Windows.Input;
-using System;
 using System.Windows;
+using System.Windows.Controls;
 
 namespace ProjectReferencesManager
 {
-    public enum ProjectListType
-    {
-        Solution,
-        Referenced,
-        Dependent
-    }
-
     public class MainWindowViewModel : INotifyPropertyChanged
     {
         private readonly CopyingManager copyingManager;
@@ -33,51 +24,19 @@ namespace ProjectReferencesManager
             this.copyingManager = copingManager;
             this.modifier = modifier;
 
-            this.OpenSolutionCommand = new RelayCommand(this.OpenSolution);
-            this.CopyProjectsCommand = new RelayCommandWithParameter(this.CopyProjects, this.CanCopyProjects);
-            this.PasteProjectsCommand = new RelayCommandWithParameter(p => { this.PasteProjects(p); this.RefreshChangesInformation(); }, this.CanPasteProjects);
-            this.RemoveProjectsCommand = new RelayCommandWithParameter(p => { this.RemoveProjects(p); this.RefreshChangesInformation(); }, this.CanRemoveProjects);
-            this.RestoreProjectsCommand = new RelayCommandWithParameter(p => { this.RestoreProjects(p); this.RefreshChangesInformation(); }, this.CanRestoreProjects);
-            this.ApplyProjectChangesCommand = new RelayCommand(() => { this.ApplyProjectChanges(); this.RefreshChangesInformation(); }, this.CanApplyProjectChanges);
-        }
+            this.Commands = new MainWindowCommands();
 
-        private void RestoreProjects(object projectsListBox)
-        {
-            var listBox = projectsListBox as ListBox;
-            var listBoxType = (ProjectListType)listBox.Tag;
-
-            var removedProjects = listBox.SelectedItems.OfType<RemovedProject>();
-            var removedProjectGUIDs = removedProjects.Select(p => p.GUID).ToArray();
-            var projectsToAdd = this.SelectedSolution.Projects.Where(p => removedProjectGUIDs.Contains(p.GUID));
-
-            switch (listBoxType)
-            {
-                case ProjectListType.Referenced:
-                    this.SelectedProject.ReferencedProjects = this.SelectedProject.ReferencedProjects.Except(removedProjects)
-                                                                                                     .Concat(projectsToAdd)
-                                                                                                     .ToArray();
-                    break;
-                case ProjectListType.Dependent:
-                    this.SelectedProject.DependentProjects = this.SelectedProject.DependentProjects.Except(removedProjects)
-                                                                                                   .Concat(projectsToAdd)
-                                                                                                   .ToArray();
-                    break;
-            }
-        }
-
-        private bool CanRestoreProjects(object projectsListBox)
-        {
-            if (projectsListBox == null)
-            {
-                return false;
-            }
-
-            return (projectsListBox as ListBox).SelectedItems.OfType<RemovedProject>().Any();
+            this.Commands.OpenSolutionCommand = new RelayCommand(this.OpenSolution);
+            this.Commands.CopyProjectsCommand = new RelayCommandWithParameter(this.CopyProjects, this.CanCopyProjects);
+            this.Commands.PasteProjectsCommand = new RelayCommandWithParameter(p => { this.PasteProjects(p); this.RefreshChangesInformation(); }, this.CanPasteProjects);
+            this.Commands.RemoveProjectsCommand = new RelayCommandWithParameter(p => { this.RemoveProjects(p); this.RefreshChangesInformation(); }, this.CanRemoveProjects);
+            this.Commands.RestoreProjectsCommand = new RelayCommandWithParameter(p => { this.RestoreProjects(p); this.RefreshChangesInformation(); }, this.CanRestoreProjects);
+            this.Commands.ApplyProjectChangesCommand = new RelayCommand(() => { this.ApplyProjectChanges(); this.RefreshChangesInformation(); }, this.CanApplyProjectChanges);
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        public RelayCommand ApplyProjectChangesCommand { get; private set; }
+        public MainWindowCommands Commands { get; private set; }
 
         public int ChangesCount
         {
@@ -92,8 +51,6 @@ namespace ProjectReferencesManager
             }
         }
 
-        public ICommand CopyProjectsCommand { get; private set; }
-
         public bool IsChanges
         {
             get
@@ -101,14 +58,6 @@ namespace ProjectReferencesManager
                 return this.ChangesCount > 0;
             }
         }
-
-        public RelayCommand OpenSolutionCommand { get; private set; }
-
-        public ICommand PasteProjectsCommand { get; private set; }
-
-        public ICommand RemoveProjectsCommand { get; private set; }
-
-        public RelayCommandWithParameter RestoreProjectsCommand { get; private set; }
 
         public Project SelectedProject
         {
@@ -142,6 +91,41 @@ namespace ProjectReferencesManager
                     this.PropertyChanged.Raise(() => this.SelectedSolution);
                 }
             }
+        }
+
+        private void RestoreProjects(object projectsListBox)
+        {
+            var listBox = projectsListBox as ListBox;
+            var listBoxType = (ProjectListType)listBox.Tag;
+
+            var removedProjects = listBox.SelectedItems.OfType<RemovedProject>();
+            var removedProjectGUIDs = removedProjects.Select(p => p.GUID).ToArray();
+            var projectsToAdd = this.SelectedSolution.Projects.Where(p => removedProjectGUIDs.Contains(p.GUID));
+
+            switch (listBoxType)
+            {
+                case ProjectListType.Referenced:
+                    this.SelectedProject.ReferencedProjects = this.SelectedProject.ReferencedProjects.Except(removedProjects)
+                                                                                                     .Concat(projectsToAdd)
+                                                                                                     .ToArray();
+                    break;
+
+                case ProjectListType.Dependent:
+                    this.SelectedProject.DependentProjects = this.SelectedProject.DependentProjects.Except(removedProjects)
+                                                                                                   .Concat(projectsToAdd)
+                                                                                                   .ToArray();
+                    break;
+            }
+        }
+
+        private bool CanRestoreProjects(object projectsListBox)
+        {
+            if (projectsListBox == null)
+            {
+                return false;
+            }
+
+            return (projectsListBox as ListBox).SelectedItems.OfType<RemovedProject>().Any();
         }
 
         private void AddToDependent(IEnumerable<IProject> newProjects)
