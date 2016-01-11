@@ -10,7 +10,7 @@ namespace ProjectReferencesManager
             InitializeComponent();
 
             var reader = new ProjectFileReader();
-            this.DataContext = new MainWindowViewModel(reader, new CopyingManager(), new ReferencesModifier(reader));
+            this.DataContext = new MainWindowViewModel(new SolutionLoader(reader), new CopyingManager(), new ProjectsChangesManager(new ReferencesModifier(reader)));
         }
     }
 }

@@ -6,22 +6,26 @@ using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System;
 
 namespace ProjectReferencesManager
 {
     public class MainWindowViewModel : INotifyPropertyChanged
     {
         private readonly CopyingManager copyingManager;
-        private readonly ReferencesModifier modifier;
-        private readonly ProjectFileReader projectReader;
         private Project selectedProject;
         private Solution selectedSolution;
+        private readonly ProjectsChangesManager changesManager;
+        private readonly SolutionLoader solutionLoader;
 
-        public MainWindowViewModel(ProjectFileReader projectReader, CopyingManager copingManager, ReferencesModifier modifier)
+        public MainWindowViewModel(
+            SolutionLoader solutionLoader,
+            CopyingManager copingManager,
+            ProjectsChangesManager changesManager)
         {
-            this.projectReader = projectReader;
+            this.solutionLoader = solutionLoader;
             this.copyingManager = copingManager;
-            this.modifier = modifier;
+            this.changesManager = changesManager;
 
             this.Commands = new MainWindowCommands();
 
@@ -31,6 +35,15 @@ namespace ProjectReferencesManager
             this.Commands.RemoveProjectsCommand = new RelayCommandWithParameter(p => { this.RemoveProjects(p); this.RefreshChangesInformation(); }, this.CanRemoveProjects);
             this.Commands.RestoreProjectsCommand = new RelayCommandWithParameter(p => { this.RestoreProjects(p); this.RefreshChangesInformation(); }, this.CanRestoreProjects);
             this.Commands.ApplyProjectChangesCommand = new RelayCommand(() => { this.ApplyProjectChanges(); this.RefreshChangesInformation(); }, this.CanApplyProjectChanges);
+        }
+
+        private void RestoreProjects(object projectsListBox)
+        {
+            var listBox = projectsListBox as ListBox;
+            var listBoxType = (ProjectListType)listBox.Tag;
+            var removedProjects = listBox.SelectedItems.OfType<RemovedProject>();
+
+            this.changesManager.RestoreProjects(this.SelectedProject, removedProjects, listBoxType);
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -87,33 +100,11 @@ namespace ProjectReferencesManager
                 if (this.selectedSolution != value)
                 {
                     this.selectedSolution = value;
+
+                    this.changesManager.AssignSolution(this.selectedSolution);
+
                     this.PropertyChanged.Raise(() => this.SelectedSolution);
                 }
-            }
-        }
-
-        private void RestoreProjects(object projectsListBox)
-        {
-            var listBox = projectsListBox as ListBox;
-            var listBoxType = (ProjectListType)listBox.Tag;
-
-            var removedProjects = listBox.SelectedItems.OfType<RemovedProject>();
-            var removedProjectGUIDs = removedProjects.Select(p => p.GUID).ToArray();
-            var projectsToAdd = this.SelectedSolution.Projects.Where(p => removedProjectGUIDs.Contains(p.GUID));
-
-            switch (listBoxType)
-            {
-                case ProjectListType.Referenced:
-                    this.SelectedProject.ReferencedProjects = this.SelectedProject.ReferencedProjects.Except(removedProjects)
-                                                                                                     .Concat(projectsToAdd)
-                                                                                                     .ToArray();
-                    break;
-
-                case ProjectListType.Dependent:
-                    this.SelectedProject.DependentProjects = this.SelectedProject.DependentProjects.Except(removedProjects)
-                                                                                                   .Concat(projectsToAdd)
-                                                                                                   .ToArray();
-                    break;
             }
         }
 
@@ -153,42 +144,7 @@ namespace ProjectReferencesManager
 
         private void ApplyProjectChanges()
         {
-            foreach (var project in this.SelectedSolution.Projects.Where(p => p.DependentProjects.Any(pr => pr.IsChangedProject()) || p.ReferencedProjects.Any(pr => pr.IsChangedProject())))
-            {
-                this.ApplyDependentProjectChanges(project);
-
-                this.ApplyReferencedProjectChanges(project);
-            }
-        }
-
-        private void ApplyReferencedProjectChanges(Project project)
-        {
-            var addedProjects = project.ReferencedProjects.GetFilteredProjects<AddedProject>();
-            var removedProjects = project.ReferencedProjects.GetFilteredProjects<RemovedProject>();
-
-            this.modifier.AddReference(project.GetAbsolutePath(this.SelectedSolution), project, addedProjects);
-            this.modifier.RemoveReference(project.GetAbsolutePath(this.SelectedSolution), removedProjects);
-
-            project.ReferencedProjects = project.ReferencedProjects.Except(removedProjects)
-                                                                   .Except(addedProjects)
-                                                                   .Concat(addedProjects.FindOriginalProjects(this.SelectedSolution.Projects))
-                                                                   .ToArray();
-        }
-
-        private void ApplyDependentProjectChanges(Project project)
-        {
-            var addedProjects = project.DependentProjects.GetFilteredProjects<AddedProject>();
-            var removedProjects = project.DependentProjects.GetFilteredProjects<RemovedProject>();
-
-            foreach (var addedProject in addedProjects)
-            {
-                this.modifier.AddReference(addedProject.GetAbsolutePath(this.SelectedSolution), addedProject, new[] { project });
-            }
-
-            project.DependentProjects = project.DependentProjects.Except(removedProjects)
-                                                                 .Except(addedProjects)
-                                                                 .Concat(addedProjects.FindOriginalProjects(this.SelectedSolution.Projects))
-                                                                 .ToArray();
+            this.changesManager.ApplyProjectChanges();
         }
 
         private bool CanApplyProjectChanges()
@@ -237,15 +193,7 @@ namespace ProjectReferencesManager
             this.copyingManager.Copy((projectsListBox as ListBox).SelectedItems.OfType<Project>());
         }
 
-        private void FindDependentProjects()
-        {
-            foreach (var project in this.SelectedSolution.Projects)
-            {
-                project.DependentProjects = this.SelectedSolution.Projects.Except(new[] { project })
-                                              .Where(p => p.ReferencedProjects.Contains(project))
-                                              .ToArray();
-            }
-        }
+
 
         private IEnumerable<IProject> GetChangedProjects()
         {
@@ -260,37 +208,6 @@ namespace ProjectReferencesManager
             return (ProjectListType)(projectsListBox as ListBox).Tag;
         }
 
-        private void LoadProjectReferences()
-        {
-            foreach (var project in this.SelectedSolution.Projects)
-            {
-                this.LoadReferencedProjects(project);
-            }
-        }
-
-        private IEnumerable<Project> LoadProjects(string filePath)
-        {
-            return new SolutionFileReader().Read(filePath)
-                                           .Select(p => new Project()
-                                           {
-                                               Name = p.Name,
-                                               Path = p.Path,
-                                               GUID = p.GUID
-                                           }).OrderBy(p => p.Name)
-                                           .ToArray();
-        }
-
-        private void LoadReferencedProjects(Project project)
-        {
-            var projectInfos = this.projectReader.Read(project.GetAbsolutePath(this.SelectedSolution));
-
-            var guids = projectInfos.Select(p => p.GUID).ToArray();
-
-            project.ReferencedProjects = this.SelectedSolution.Projects.Where(p => guids.Contains(p.GUID))
-                                                                                    .OrderBy(p => p.Name)
-                                                                                    .ToArray();
-        }
-
         private void OpenSolution()
         {
             var dialog = new OpenFileDialog();
@@ -299,14 +216,7 @@ namespace ProjectReferencesManager
 
             if (dialog.ShowDialog() == true)
             {
-                this.SelectedSolution = new Solution()
-                {
-                    FullPath = dialog.FileName,
-                    Projects = this.LoadProjects(dialog.FileName)
-                };
-
-                this.LoadProjectReferences();
-                this.FindDependentProjects();
+                this.SelectedSolution = this.solutionLoader.Load(dialog.FileName);
             }
         }
 
