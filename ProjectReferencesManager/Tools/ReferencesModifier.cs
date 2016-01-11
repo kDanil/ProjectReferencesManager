@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Xml.Linq;
-using System;
 
 namespace ProjectReferencesManager.Tools
 {
@@ -16,10 +15,11 @@ namespace ProjectReferencesManager.Tools
             this.reader = reader;
         }
 
-        internal void AddReference(string projectPath, int depth, IEnumerable<IProject> newProjects)
+        internal void AddReference(string projectPath, IProject targetProject, IEnumerable<IProject> newProjects)
         {
             var root = this.reader.ReadDocument(projectPath);
             var elementGroup = this.reader.ReadReferencesGroup(root);
+            var depth = this.GetPathDepth(targetProject.Path);
 
             var solutionRelativePath = string.Join("", Enumerable.Range(0, depth).Select(i => ".." + Path.DirectorySeparatorChar));
 
@@ -55,6 +55,11 @@ namespace ProjectReferencesManager.Tools
         private bool IsProjectToRemove(IEnumerable<RemovedProject> removedProjects, XElement e)
         {
             return e.Name.LocalName == "ProjectReference" && e.Elements().Any(n => n.Name.LocalName == "Project" && removedProjects.Any(p => p.GUID == GUIDFormatter.Format(n.Value)));
+        }
+
+        private int GetPathDepth(string path)
+        {
+            return path.Split(Path.DirectorySeparatorChar).Length - 1;
         }
     }
 }

@@ -3,7 +3,6 @@ using ProjectReferencesManager.Model;
 using ProjectReferencesManager.Tools;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -154,7 +153,7 @@ namespace ProjectReferencesManager
 
         private void ApplyProjectChanges()
         {
-            foreach (var project in this.SelectedSolution.Projects.Where(p => p.DependentProjects.Any(pr => this.IsChangedProject(pr)) || p.ReferencedProjects.Any(pr => this.IsChangedProject(pr))))
+            foreach (var project in this.SelectedSolution.Projects.Where(p => p.DependentProjects.Any(pr => pr.IsChangedProject()) || p.ReferencedProjects.Any(pr => pr.IsChangedProject())))
             {
                 this.ApplyDependentProjectChanges(project);
 
@@ -164,41 +163,31 @@ namespace ProjectReferencesManager
 
         private void ApplyReferencedProjectChanges(Project project)
         {
-            var addedProjects = this.GetFilteredProjects<AddedProject>(project.ReferencedProjects);
-            var removedProjects = this.GetFilteredProjects<RemovedProject>(project.ReferencedProjects);
+            var addedProjects = project.ReferencedProjects.GetFilteredProjects<AddedProject>();
+            var removedProjects = project.ReferencedProjects.GetFilteredProjects<RemovedProject>();
 
-            this.modifier.AddReference(this.GetAbsoluteProjectPath(project), this.GetPathDepth(project.Path), addedProjects);
-            this.modifier.RemoveReference(this.GetAbsoluteProjectPath(project), removedProjects);
+            this.modifier.AddReference(project.GetAbsolutePath(this.SelectedSolution), project, addedProjects);
+            this.modifier.RemoveReference(project.GetAbsolutePath(this.SelectedSolution), removedProjects);
 
             project.ReferencedProjects = project.ReferencedProjects.Except(removedProjects)
                                                                    .Except(addedProjects)
-                                                                   .Concat(this.FindOriginalProjects(addedProjects))
+                                                                   .Concat(addedProjects.FindOriginalProjects(this.SelectedSolution.Projects))
                                                                    .ToArray();
-        }
-
-        private Project FindOriginalProject(IProject project)
-        {
-            return this.FindOriginalProjects(new[] { project }).Single();
-        }
-
-        private IEnumerable<Project> FindOriginalProjects(IEnumerable<IProject> projects)
-        {
-            return this.SelectedSolution.Projects.Where(p => projects.Any(ap => ap.GUID == p.GUID));
         }
 
         private void ApplyDependentProjectChanges(Project project)
         {
-            var addedProjects = this.GetFilteredProjects<AddedProject>(project.DependentProjects);
-            var removedProjects = this.GetFilteredProjects<RemovedProject>(project.DependentProjects);
+            var addedProjects = project.DependentProjects.GetFilteredProjects<AddedProject>();
+            var removedProjects = project.DependentProjects.GetFilteredProjects<RemovedProject>();
 
             foreach (var addedProject in addedProjects)
             {
-                this.modifier.AddReference(this.GetAbsoluteProjectPath(addedProject), this.GetPathDepth(addedProject.Path), new[] { project });
+                this.modifier.AddReference(addedProject.GetAbsolutePath(this.SelectedSolution), addedProject, new[] { project });
             }
 
             project.DependentProjects = project.DependentProjects.Except(removedProjects)
                                                                  .Except(addedProjects)
-                                                                 .Concat(this.FindOriginalProjects(addedProjects))
+                                                                 .Concat(addedProjects.FindOriginalProjects(this.SelectedSolution.Projects))
                                                                  .ToArray();
         }
 
@@ -258,32 +247,12 @@ namespace ProjectReferencesManager
             }
         }
 
-        private string GetAbsoluteProjectPath(IProject project)
-        {
-            return this.SelectedSolution.FolderPath + Path.DirectorySeparatorChar + project.Path;
-        }
-
-        private int GetPathDepth(string path)
-        {
-            return path.Split(Path.DirectorySeparatorChar).Length - 1;
-        }
-
         private IEnumerable<IProject> GetChangedProjects()
         {
-            var dependentProjects = this.SelectedSolution.Projects.SelectMany(p => p.DependentProjects.Where(pr => this.IsChangedProject(pr)));
-            var referencedProjects = this.SelectedSolution.Projects.SelectMany(p => p.ReferencedProjects.Where(pr => this.IsChangedProject(pr)));
+            var dependentProjects = this.SelectedSolution.Projects.SelectMany(p => p.DependentProjects.Where(pr => pr.IsChangedProject()));
+            var referencedProjects = this.SelectedSolution.Projects.SelectMany(p => p.ReferencedProjects.Where(pr => pr.IsChangedProject()));
 
             return dependentProjects.Concat(referencedProjects);
-        }
-
-        private IEnumerable<T> GetFilteredProjects<T>(IEnumerable<IProject> projects) where T : IProject
-        {
-            return projects.Where(pr => this.IsChangedProject(pr)).OfType<T>();
-        }
-
-        private bool IsChangedProject(IProject project)
-        {
-            return project is AddedProject || project is RemovedProject;
         }
 
         private ProjectListType GetProjectListType(object projectsListBox)
@@ -313,7 +282,7 @@ namespace ProjectReferencesManager
 
         private void LoadReferencedProjects(Project project)
         {
-            var projectInfos = this.projectReader.Read(this.GetAbsoluteProjectPath(project));
+            var projectInfos = this.projectReader.Read(project.GetAbsolutePath(this.SelectedSolution));
 
             var guids = projectInfos.Select(p => p.GUID).ToArray();
 
@@ -353,7 +322,7 @@ namespace ProjectReferencesManager
             {
                 case ProjectListType.Referenced:
 
-                    if (!this.SelectedProject.DependentProjects.Any(p => !this.IsChangedProject(p) && newProjects.Any(np => np.GUID == p.GUID)))
+                    if (!this.SelectedProject.DependentProjects.Any(p => !p.IsChangedProject() && newProjects.Any(np => np.GUID == p.GUID)))
                     {
                         this.AddToReferenced(newProjects);
                     }
@@ -366,7 +335,7 @@ namespace ProjectReferencesManager
 
                 case ProjectListType.Dependent:
 
-                    if (!this.SelectedProject.ReferencedProjects.Any(p => !this.IsChangedProject(p) && newProjects.Any(np => np.GUID == p.GUID)))
+                    if (!this.SelectedProject.ReferencedProjects.Any(p => !p.IsChangedProject() && newProjects.Any(np => np.GUID == p.GUID)))
                     {
                         this.AddToDependent(newProjects);
                     }
