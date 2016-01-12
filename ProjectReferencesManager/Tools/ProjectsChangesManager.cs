@@ -4,14 +4,25 @@ using System.Linq;
 
 namespace ProjectReferencesManager.Tools
 {
-    public class ProjectsChangesManager
+    public interface IProjectsChangesManager
     {
-        private readonly ReferencesModifier modifier;
-        private Solution solution;
-        private readonly CopyingManager copyingManager;
-        private readonly UserInteraction interaction;
+        void AssignSolution(Solution solution);
 
-        public ProjectsChangesManager(ReferencesModifier modifier, CopyingManager copyingManager, UserInteraction interaction)
+        void ApplyProjectChanges();
+
+        void RestoreProjects(Project targetProject, IEnumerable<RemovedProject> removedProjects, ProjectListType projectType);
+
+        void PasteProjects(Project targetProject, ProjectListType type);
+    }
+
+    public class ProjectsChangesManager : IProjectsChangesManager
+    {
+        private readonly IReferencesModifier modifier;
+        private readonly ICopyingManager copyingManager;
+        private readonly IUserInteraction interaction;
+        private Solution solution;
+
+        public ProjectsChangesManager(IReferencesModifier modifier, ICopyingManager copyingManager, IUserInteraction interaction)
         {
             this.modifier = modifier;
             this.copyingManager = copyingManager;
@@ -67,7 +78,7 @@ namespace ProjectReferencesManager.Tools
 
                     if (!targetProject.DependentProjects.Any(p => !p.IsChangedProject() && newProjects.Any(np => np.GUID == p.GUID)))
                     {
-                        this.AddToReferenced(targetProject,newProjects);
+                        this.AddToReferenced(targetProject, newProjects);
                     }
                     else
                     {

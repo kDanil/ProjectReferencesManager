@@ -4,7 +4,18 @@ using System.Linq;
 
 namespace ProjectReferencesManager.Tools
 {
-    public class CopyingManager
+    public interface ICopyingManager
+    {
+        void Copy(IEnumerable<IProject> projects);
+
+        IEnumerable<IProject> Paste();
+
+        bool HasData();
+
+        int Count();
+    }
+
+    public class CopyingManager : ICopyingManager
     {
         private List<IProject> projects = new List<IProject>();
 

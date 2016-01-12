@@ -6,16 +6,23 @@ using System.Xml.Linq;
 
 namespace ProjectReferencesManager.Tools
 {
-    public class ReferencesModifier
+    public interface IReferencesModifier
     {
-        private readonly ProjectFileReader reader;
+        void AddReference(string projectPath, IProject targetProject, IEnumerable<IProject> newProjects);
 
-        public ReferencesModifier(ProjectFileReader reader)
+        void RemoveReference(string projectPath, IEnumerable<RemovedProject> removedProjects);
+    }
+
+    public class ReferencesModifier : IReferencesModifier
+    {
+        private readonly IProjectFileReader reader;
+
+        public ReferencesModifier(IProjectFileReader reader)
         {
             this.reader = reader;
         }
 
-        internal void AddReference(string projectPath, IProject targetProject, IEnumerable<IProject> newProjects)
+        public void AddReference(string projectPath, IProject targetProject, IEnumerable<IProject> newProjects)
         {
             var root = this.reader.ReadDocument(projectPath);
             var elementGroup = this.reader.ReadReferencesGroup(root);
@@ -40,7 +47,7 @@ namespace ProjectReferencesManager.Tools
             root.Save(projectPath);
         }
 
-        internal void RemoveReference(string projectPath, IEnumerable<RemovedProject> removedProjects)
+        public void RemoveReference(string projectPath, IEnumerable<RemovedProject> removedProjects)
         {
             var root = this.reader.ReadDocument(projectPath);
             var elementGroup = this.reader.ReadReferencesGroup(root);

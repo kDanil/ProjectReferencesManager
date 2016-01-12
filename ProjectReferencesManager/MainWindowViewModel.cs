@@ -1,5 +1,4 @@
-﻿using Microsoft.Win32;
-using ProjectReferencesManager.Model;
+﻿using ProjectReferencesManager.Model;
 using ProjectReferencesManager.Tools;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -8,20 +7,27 @@ using System.Windows.Controls;
 
 namespace ProjectReferencesManager
 {
-    public class MainWindowViewModel : INotifyPropertyChanged
+    public interface IMainWindowViewModel
     {
-        private readonly CopyingManager copyingManager;
-        private readonly ProjectsChangesManager changesManager;
-        private readonly SolutionLoader solutionLoader;
+    }
+
+    public class MainWindowViewModel : IMainWindowViewModel, INotifyPropertyChanged
+    {
+        private readonly ICopyingManager copyingManager;
+        private readonly IProjectsChangesManager changesManager;
+        private readonly ISolutionLoader loader;
+        private readonly ISolutionFileOpener fileOpener;
         private Project selectedProject;
         private Solution selectedSolution;
 
         public MainWindowViewModel(
-            SolutionLoader solutionLoader,
-            CopyingManager copyingManager,
-            ProjectsChangesManager changesManager)
+            ISolutionFileOpener fileOpener,
+            ISolutionLoader loader,
+            ICopyingManager copyingManager,
+            IProjectsChangesManager changesManager)
         {
-            this.solutionLoader = solutionLoader;
+            this.fileOpener = fileOpener;
+            this.loader = loader;
             this.copyingManager = copyingManager;
             this.changesManager = changesManager;
 
@@ -187,13 +193,11 @@ namespace ProjectReferencesManager
 
         private void OpenSolution()
         {
-            var dialog = new OpenFileDialog();
-            dialog.CheckFileExists = true;
-            dialog.FileName = "*.sln";
+            var fileName = this.fileOpener.Open();
 
-            if (dialog.ShowDialog() == true)
+            if (!string.IsNullOrEmpty(fileName))
             {
-                this.SelectedSolution = this.solutionLoader.Load(dialog.FileName);
+                this.SelectedSolution = this.loader.Load(fileName);
             }
         }
 

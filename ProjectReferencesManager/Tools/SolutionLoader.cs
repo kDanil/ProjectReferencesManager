@@ -4,12 +4,17 @@ using System.Linq;
 
 namespace ProjectReferencesManager.Tools
 {
-    public class SolutionLoader
+    public interface ISolutionLoader
     {
-        private Solution solution;
-        private readonly ProjectFileReader reader;
+        Solution Load(string fileName);
+    }
 
-        public SolutionLoader(ProjectFileReader reader)
+    public class SolutionLoader : ISolutionLoader
+    {
+        private readonly IProjectFileReader reader;
+        private Solution solution;
+
+        public SolutionLoader(IProjectFileReader reader)
         {
             this.reader = reader;
         }

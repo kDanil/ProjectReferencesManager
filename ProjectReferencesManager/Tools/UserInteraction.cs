@@ -2,7 +2,12 @@
 
 namespace ProjectReferencesManager.Tools
 {
-    public class UserInteraction
+    public interface IUserInteraction
+    {
+        void ShowError(string test);
+    }
+
+    public class UserInteraction : IUserInteraction
     {
         public void ShowError(string test)
         {

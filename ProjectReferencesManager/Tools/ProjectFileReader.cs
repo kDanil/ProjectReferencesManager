@@ -4,7 +4,16 @@ using System.Xml.Linq;
 
 namespace ProjectReferencesManager.Tools
 {
-    public class ProjectFileReader
+    public interface IProjectFileReader
+    {
+        XElement ReadDocument(string filePath);
+
+        XElement ReadReferencesGroup(XElement root);
+
+        IEnumerable<ProjectFileInfo> Read(string filePath);
+    }
+
+    public class ProjectFileReader : IProjectFileReader
     {
         public XElement ReadDocument(string filePath)
         {
