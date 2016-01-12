@@ -1,5 +1,7 @@
 ﻿using ProjectReferencesManager.Model;
 using ProjectReferencesManager.Tools;
+using ProjectReferencesManager.Tools.Core;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -35,10 +37,10 @@ namespace ProjectReferencesManager
 
             this.Commands.OpenSolutionCommand = new RelayCommand(this.OpenSolution);
             this.Commands.CopyProjectsCommand = new RelayCommandWithParameter(this.CopyProjects, this.CanCopyProjects);
-            this.Commands.PasteProjectsCommand = new RelayCommandWithParameter(p => { this.PasteProjects(p); this.RefreshChangesInformation(); }, this.CanPasteProjects);
-            this.Commands.RemoveProjectsCommand = new RelayCommandWithParameter(p => { this.RemoveProjects(p); this.RefreshChangesInformation(); }, this.CanRemoveProjects);
-            this.Commands.RestoreProjectsCommand = new RelayCommandWithParameter(p => { this.RestoreProjects(p); this.RefreshChangesInformation(); }, this.CanRestoreProjects);
-            this.Commands.ApplyProjectChangesCommand = new RelayCommand(() => { this.ApplyProjectChanges(); this.RefreshChangesInformation(); }, this.CanApplyProjectChanges);
+            this.Commands.PasteProjectsCommand = new RelayCommandWithParameter(p => this.RunWithRefresh(() => this.PasteProjects(p)), this.CanPasteProjects);
+            this.Commands.RemoveProjectsCommand = new RelayCommandWithParameter(p => this.RunWithRefresh(() => this.RemoveProjects(p)), this.CanRemoveProjects);
+            this.Commands.RestoreProjectsCommand = new RelayCommandWithParameter(p => this.RunWithRefresh(() => this.RestoreProjects(p)), this.CanRestoreProjects);
+            this.Commands.ApplyProjectChangesCommand = new RelayCommand(() => this.RunWithRefresh(() => this.ApplyProjectChanges()), this.CanApplyProjectChanges);
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -101,6 +103,12 @@ namespace ProjectReferencesManager
                     this.PropertyChanged.Raise(() => this.SelectedSolution);
                 }
             }
+        }
+
+        public void RunWithRefresh(Action action)
+        {
+            action();
+            this.RefreshChangesInformation();
         }
 
         private void PasteProjects(object type)

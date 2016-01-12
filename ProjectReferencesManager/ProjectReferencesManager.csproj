@@ -70,10 +70,10 @@
     <Compile Include="Model\RemovedProject.cs" />
     <Compile Include="Model\ProjectListType.cs" />
     <Compile Include="Tools\ProjectsChangesManager.cs" />
-    <Compile Include="Tools\RelayCommand.cs" />
+    <Compile Include="Tools\Core\RelayCommand.cs" />
     <Compile Include="Model\Solution.cs" />
-    <Compile Include="Tools\RelayCommandWithParameter.cs" />
-    <Compile Include="Tools\BindingErrorListener.cs" />
+    <Compile Include="Tools\Core\RelayCommandWithParameter.cs" />
+    <Compile Include="Tools\Core\BindingErrorListener.cs" />
     <Compile Include="Tools\CopyingManager.cs" />
     <Compile Include="Tools\GUIDFormatter.cs" />
     <Compile Include="Tools\ProjectFileReader.cs" />

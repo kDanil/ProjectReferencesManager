@@ -1,4 +1,5 @@
 ﻿using ProjectReferencesManager.Tools;
+using ProjectReferencesManager.Tools.Core;
 using System;
 using System.Collections.Generic;
 using System.Configuration;

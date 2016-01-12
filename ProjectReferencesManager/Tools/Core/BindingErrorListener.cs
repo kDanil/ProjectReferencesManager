@@ -4,7 +4,7 @@ using System.Text;
 using System.Windows;
 using System.Windows.Threading;
 
-namespace ProjectReferencesManager.Tools
+namespace ProjectReferencesManager.Tools.Core
 {
     public class BindingErrorListener : DefaultTraceListener
     {
