@@ -12,13 +12,11 @@ namespace ProjectReferencesManager.Tools
     public class SolutionLoader : ISolutionLoader
     {
         private readonly IProjectFileReader reader;
-        private readonly IProjectCollectionsModifier collectionModifier;
         private Solution solution;
 
-        public SolutionLoader(IProjectFileReader reader, IProjectCollectionsModifier collectionModifier)
+        public SolutionLoader(IProjectFileReader reader)
         {
             this.reader = reader;
-            this.collectionModifier = collectionModifier;
         }
 
         public Solution Load(string fileName)
@@ -51,8 +49,9 @@ namespace ProjectReferencesManager.Tools
         {
             foreach (var project in this.solution.Projects)
             {
-                project.DependentProjects = this.collectionModifier.Prepare(this.solution.Projects.Except(new[] { project })
-                                                                                         .Where(p => p.ReferencedProjects.Contains(project)));
+                project.DependentProjects = this.solution.Projects.Except(new[] { project })
+                                                                  .Where(p => p.ReferencedProjects.Contains(project))
+                                                                  .ToArray();
             }
         }
 
@@ -70,7 +69,8 @@ namespace ProjectReferencesManager.Tools
 
             var guids = projectInfos.Select(p => p.GUID).ToArray();
 
-            project.ReferencedProjects = this.collectionModifier.Prepare(this.solution.Projects.Where(p => guids.Contains(p.GUID)));
+            project.ReferencedProjects = this.solution.Projects.Where(p => guids.Contains(p.GUID))
+                                                               .ToArray();
         }
     }
 }

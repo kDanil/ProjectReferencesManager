@@ -1,4 +1,5 @@
 ﻿using ProjectReferencesManager.Model;
+using ProjectReferencesManager.Tools;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -18,7 +19,7 @@ namespace ProjectReferencesManager.Converters
                 throw new Exception("Wrong converter usage");
             }
 
-            return projects.Where(p => p.IsChangedProject()).ToArray();
+            return new ProjectCollectionsModifier().Prepare(projects.Where(p => p.IsChangedProject()));
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

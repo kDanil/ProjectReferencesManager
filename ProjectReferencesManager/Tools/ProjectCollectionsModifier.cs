@@ -13,7 +13,24 @@ namespace ProjectReferencesManager.Tools
     {
         public IEnumerable<IProject> Prepare(IEnumerable<IProject> projects)
         {
-            return projects.OrderBy(p => p.Name).ToArray();
+            return projects.OrderBy(this.GetProjectsOrder)
+                           .ThenBy(p => p.Name)
+                           .ToArray();
+        }
+
+        private object GetProjectsOrder(IProject project)
+        {
+            if (project is AddedProject)
+            {
+                return 1;
+            }
+            else
+            if (project is RemovedProject)
+            {
+                return 2;
+            }
+
+            return 0;
         }
     }
 }
