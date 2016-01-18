@@ -11,6 +11,15 @@ namespace ProjectReferencesManager
 {
     public interface IMainWindowViewModel
     {
+        Solution SelectedSolution { get; set; }
+
+        Project SelectedProject { get; set; }
+
+        bool IsChanges { get; }
+
+        int ChangesCount { get; }
+
+        void RunWithRefresh(Action action);
     }
 
     public class MainWindowViewModel : IMainWindowViewModel, INotifyPropertyChanged
@@ -215,39 +224,12 @@ namespace ProjectReferencesManager
             this.PropertyChanged.Raise(() => this.IsChanges);
         }
 
-        private void RemoveFromDependent(IEnumerable<IProject> projectsToRemove)
-        {
-            var newProjects = this.SelectedProject.DependentProjects.Except(projectsToRemove).ToArray();
-            var projectsToAdd = projectsToRemove.Where(p => p is Project || p is RemovedProject)
-                                                .Select(p => new RemovedProject(p));
-
-            this.SelectedProject.DependentProjects = newProjects.Concat(projectsToAdd).ToArray();
-        }
-
-        private void RemoveFromReferenced(IEnumerable<IProject> projectsToRemove)
-        {
-            var newProjects = this.SelectedProject.ReferencedProjects.Except(projectsToRemove).ToArray();
-            var projectsToAdd = projectsToRemove.Where(p => p is Project || p is RemovedProject)
-                                                .Select(p => new RemovedProject(p));
-
-            this.SelectedProject.ReferencedProjects = newProjects.Concat(projectsToAdd).ToArray();
-        }
-
         private void RemoveProjects(object projectsListBox)
         {
             var projectsToRemove = (projectsListBox as ListBox).SelectedItems.OfType<IProject>();
             var listType = this.GetProjectListType(projectsListBox);
 
-            switch (listType)
-            {
-                case ProjectListType.Referenced:
-                    this.RemoveFromReferenced(projectsToRemove);
-                    break;
-
-                case ProjectListType.Dependent:
-                    this.RemoveFromDependent(projectsToRemove);
-                    break;
-            }
+            this.changesManager.RemoveProjects(listType, this.SelectedProject, projectsToRemove);
         }
     }
 }

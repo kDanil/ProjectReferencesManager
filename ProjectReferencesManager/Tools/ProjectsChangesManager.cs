@@ -13,6 +13,8 @@ namespace ProjectReferencesManager.Tools
         void RestoreProjects(Project targetProject, IEnumerable<RemovedProject> removedProjects, ProjectListType projectType);
 
         void PasteProjects(Project targetProject, ProjectListType type);
+
+        void RemoveProjects(ProjectListType listType, Project targetProject, IEnumerable<IProject> projectsToRemove);
     }
 
     public class ProjectsChangesManager : IProjectsChangesManager
@@ -109,6 +111,20 @@ namespace ProjectReferencesManager.Tools
             }
         }
 
+        public void RemoveProjects(ProjectListType listType, Project targetProject, IEnumerable<IProject> projectsToRemove)
+        {
+            switch (listType)
+            {
+                case ProjectListType.Referenced:
+                    this.RemoveFromReferenced(targetProject, projectsToRemove);
+                    break;
+
+                case ProjectListType.Dependent:
+                    this.RemoveFromDependent(targetProject, projectsToRemove);
+                    break;
+            }
+        }
+
         private void AddToDependent(Project targetProject, IEnumerable<IProject> newProjects)
         {
             var projectsToAdd = newProjects.Except(targetProject.DependentProjects)
@@ -161,6 +177,24 @@ namespace ProjectReferencesManager.Tools
                                                                  .Except(addedProjects)
                                                                  .Concat(addedProjects.FindOriginalProjects(this.solution.Projects))
                                                                  .ToArray();
+        }
+
+        private void RemoveFromDependent(Project targetProject, IEnumerable<IProject> projectsToRemove)
+        {
+            var newProjects = targetProject.DependentProjects.Except(projectsToRemove).ToArray();
+            var projectsToAdd = projectsToRemove.Where(p => p is Project || p is RemovedProject)
+                                                .Select(p => new RemovedProject(p));
+
+            targetProject.DependentProjects = newProjects.Concat(projectsToAdd).ToArray();
+        }
+
+        private void RemoveFromReferenced(Project targetProject, IEnumerable<IProject> projectsToRemove)
+        {
+            var newProjects = targetProject.ReferencedProjects.Except(projectsToRemove).ToArray();
+            var projectsToAdd = projectsToRemove.Where(p => p is Project || p is RemovedProject)
+                                                .Select(p => new RemovedProject(p));
+
+            targetProject.ReferencedProjects = newProjects.Concat(projectsToAdd).ToArray();
         }
     }
 }
