@@ -63,7 +63,7 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="Extensions\INotifyPropertyChangedExtensions.cs" />
-    <Compile Include="Extensions\ProjectsExtensions.cs" />
+    <Compile Include="Extensions\ModelExtensions.cs" />
     <Compile Include="MainWindowCommands.cs" />
     <Compile Include="Model\AddedProject.cs" />
     <Compile Include="Model\Project.cs" />

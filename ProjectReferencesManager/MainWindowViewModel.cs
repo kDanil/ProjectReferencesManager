@@ -2,7 +2,6 @@
 using ProjectReferencesManager.Tools;
 using ProjectReferencesManager.Tools.Core;
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Windows.Controls;
@@ -65,7 +64,7 @@ namespace ProjectReferencesManager
                     return default(int);
                 }
 
-                return this.GetChangedProjects().Count();
+                return this.SelectedSolution.GetChangedProjects().Count();
             }
         }
 
@@ -193,14 +192,6 @@ namespace ProjectReferencesManager
         private void CopyProjects(object projectsListBox)
         {
             this.copyingManager.Copy((projectsListBox as ListBox).SelectedItems.OfType<Project>());
-        }
-
-        private IEnumerable<IProject> GetChangedProjects()
-        {
-            var dependentProjects = this.SelectedSolution.Projects.SelectMany(p => p.DependentProjects.Where(pr => pr.IsChangedProject()));
-            var referencedProjects = this.SelectedSolution.Projects.SelectMany(p => p.ReferencedProjects.Where(pr => pr.IsChangedProject()));
-
-            return dependentProjects.Concat(referencedProjects);
         }
 
         private ProjectListType GetProjectListType(object projectsListBox)

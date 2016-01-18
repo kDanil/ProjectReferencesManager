@@ -7,11 +7,6 @@ namespace ProjectReferencesManager
 {
     public static class ProjectsExtensions
     {
-        public static Project FindOriginalProject(this IProject project, IEnumerable<Project> solutionProjects)
-        {
-            return new[] { project }.FindOriginalProjects(solutionProjects).Single();
-        }
-
         public static IEnumerable<Project> FindOriginalProjects(this IEnumerable<IProject> projects, IEnumerable<Project> solutionProjects)
         {
             return solutionProjects.Where(p => projects.Any(ap => ap.GUID == p.GUID));
@@ -30,6 +25,17 @@ namespace ProjectReferencesManager
         public static IEnumerable<T> GetFilteredProjects<T>(this IEnumerable<IProject> projects) where T : IProject
         {
             return projects.Where(pr => pr.IsChangedProject()).OfType<T>();
+        }
+    }
+
+    public static class SolutionExtensions
+    {
+        public static IEnumerable<IProject> GetChangedProjects(this Solution solution)
+        {
+            var dependentProjects = solution.Projects.SelectMany(p => p.DependentProjects.Where(pr => pr.IsChangedProject()));
+            var referencedProjects = solution.Projects.SelectMany(p => p.ReferencedProjects.Where(pr => pr.IsChangedProject()));
+
+            return dependentProjects.Concat(referencedProjects);
         }
     }
 }
