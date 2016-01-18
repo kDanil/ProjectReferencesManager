@@ -62,6 +62,8 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Converters\OnlyChangedProjectsConverter.cs" />
+    <Compile Include="Converters\OnlyUnchangedProjectsConverter.cs" />
     <Compile Include="Extensions\INotifyPropertyChangedExtensions.cs" />
     <Compile Include="Extensions\ModelExtensions.cs" />
     <Compile Include="MainWindowCommands.cs" />
