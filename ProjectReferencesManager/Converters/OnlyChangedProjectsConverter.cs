@@ -11,6 +11,13 @@ namespace ProjectReferencesManager.Converters
 {
     public class OnlyChangedProjectsConverter : MarkupExtension, IValueConverter
     {
+        private readonly ProjectCollectionsModifier modifier;
+
+        public OnlyChangedProjectsConverter()
+        {
+            this.modifier = new ProjectCollectionsModifier();
+        }
+
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
             var projects = value as IEnumerable<IProject>;
@@ -19,7 +26,7 @@ namespace ProjectReferencesManager.Converters
                 throw new Exception("Wrong converter usage");
             }
 
-            return new ProjectCollectionsModifier().Prepare(projects.Where(p => p.IsChangedProject()));
+            return this.modifier.Prepare(projects.Where(p => p.IsChangedProject()));
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
