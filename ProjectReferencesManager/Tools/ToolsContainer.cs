@@ -28,6 +28,7 @@ namespace ProjectReferencesManager.Tools
             this.container.Register(Component.For<IProjectFileReader>().ImplementedBy<ProjectFileReader>());
             this.container.Register(Component.For<ICopyingManager>().ImplementedBy<CopyingManager>());
             this.container.Register(Component.For<ISolutionFileOpener>().ImplementedBy<SolutionFileOpener>());
+            this.container.Register(Component.For<IProjectCollectionsModifier>().ImplementedBy<ProjectCollectionsModifier>());
             this.container.Register(Component.For<ISolutionLoader>().ImplementedBy<SolutionLoader>());
             this.container.Register(Component.For<IProjectsChangesManager>().ImplementedBy<ProjectsChangesManager>());
             this.container.Register(Component.For<IReferencesModifier>().ImplementedBy<ReferencesModifier>());

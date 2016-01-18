@@ -69,6 +69,7 @@
     <Compile Include="Model\Project.cs" />
     <Compile Include="Model\RemovedProject.cs" />
     <Compile Include="Model\ProjectListType.cs" />
+    <Compile Include="Tools\ProjectCollectionsModifier.cs" />
     <Compile Include="Tools\ProjectsChangesManager.cs" />
     <Compile Include="Tools\Core\RelayCommand.cs" />
     <Compile Include="Model\Solution.cs" />

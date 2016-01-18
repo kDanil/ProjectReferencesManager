@@ -22,12 +22,18 @@ namespace ProjectReferencesManager.Tools
         private readonly IReferencesModifier modifier;
         private readonly ICopyingManager copyingManager;
         private readonly IUserInteraction interaction;
+        private readonly IProjectCollectionsModifier collectionModifier;
         private Solution solution;
 
-        public ProjectsChangesManager(IReferencesModifier modifier, ICopyingManager copyingManager, IUserInteraction interaction)
+        public ProjectsChangesManager(
+            IReferencesModifier modifier,
+            ICopyingManager copyingManager,
+            IProjectCollectionsModifier collectionModifier,
+            IUserInteraction interaction)
         {
             this.modifier = modifier;
             this.copyingManager = copyingManager;
+            this.collectionModifier = collectionModifier;
             this.interaction = interaction;
         }
 
@@ -39,7 +45,7 @@ namespace ProjectReferencesManager.Tools
         public void ApplyProjectChanges()
         {
             foreach (var project in this.solution.Projects.Where(p => p.DependentProjects.Any(pr => pr.IsChangedProject()) ||
-                                                                 p.ReferencedProjects.Any(pr => pr.IsChangedProject())))
+                                                                      p.ReferencedProjects.Any(pr => pr.IsChangedProject())))
             {
                 this.ApplyDependentProjectChanges(project);
 
@@ -55,15 +61,13 @@ namespace ProjectReferencesManager.Tools
             switch (projectType)
             {
                 case ProjectListType.Referenced:
-                    targetProject.ReferencedProjects = targetProject.ReferencedProjects.Except(removedProjects)
-                                                                                                     .Concat(projectsToAdd)
-                                                                                                     .ToArray();
+                    targetProject.ReferencedProjects = this.collectionModifier.Prepare(targetProject.ReferencedProjects.Except(removedProjects)
+                                                                                                     .Concat(projectsToAdd));
                     break;
 
                 case ProjectListType.Dependent:
-                    targetProject.DependentProjects = targetProject.DependentProjects.Except(removedProjects)
-                                                                                                   .Concat(projectsToAdd)
-                                                                                                   .ToArray();
+                    targetProject.DependentProjects = this.collectionModifier.Prepare(targetProject.DependentProjects.Except(removedProjects)
+                                                                                                   .Concat(projectsToAdd));
                     break;
             }
         }
@@ -78,7 +82,7 @@ namespace ProjectReferencesManager.Tools
             {
                 case ProjectListType.Referenced:
 
-                    if (!targetProject.DependentProjects.Any(p => !p.IsChangedProject() && newProjects.Any(np => np.GUID == p.GUID)))
+                    if (!targetProject.DependentProjects.Any(p => this.IsProjectExists(p, newProjects)))
                     {
                         this.AddToReferenced(targetProject, newProjects);
                     }
@@ -91,7 +95,7 @@ namespace ProjectReferencesManager.Tools
 
                 case ProjectListType.Dependent:
 
-                    if (!targetProject.ReferencedProjects.Any(p => !p.IsChangedProject() && newProjects.Any(np => np.GUID == p.GUID)))
+                    if (!targetProject.ReferencedProjects.Any(p => this.IsProjectExists(p, newProjects)))
                     {
                         this.AddToDependent(targetProject, newProjects);
                     }
@@ -125,16 +129,20 @@ namespace ProjectReferencesManager.Tools
             }
         }
 
+        private bool IsProjectExists(IProject project, IEnumerable<IProject> newProjects)
+        {
+            return !project.IsChangedProject() && newProjects.Any(np => np.GUID == project.GUID);
+        }
+
         private void AddToDependent(Project targetProject, IEnumerable<IProject> newProjects)
         {
             var projectsToAdd = newProjects.Except(targetProject.DependentProjects)
                                                       .Select(p => new AddedProject(p));
 
-            var projectsToRemove = targetProject.DependentProjects.Where(p => p is RemovedProject && projectsToAdd.Any(pp => pp.GUID == p.GUID));
+            var projectsToRemove = targetProject.DependentProjects.Where(p => this.IsProjectToRemove(p, projectsToAdd));
 
-            targetProject.DependentProjects = targetProject.DependentProjects.Except(projectsToRemove)
-                                                                                           .Concat(projectsToAdd)
-                                                                                           .ToArray();
+            targetProject.DependentProjects = this.collectionModifier.Prepare(targetProject.DependentProjects.Except(projectsToRemove)
+                                                                                           .Concat(projectsToAdd));
         }
 
         private void AddToReferenced(Project targetProject, IEnumerable<IProject> newProjects)
@@ -142,11 +150,15 @@ namespace ProjectReferencesManager.Tools
             var projectsToAdd = newProjects.Except(targetProject.ReferencedProjects)
                                            .Select(p => new AddedProject(p));
 
-            var projectsToRemove = targetProject.ReferencedProjects.Where(p => p is RemovedProject && projectsToAdd.Any(pp => pp.GUID == p.GUID));
+            var projectsToRemove = targetProject.ReferencedProjects.Where(p => this.IsProjectToRemove(p, projectsToAdd));
 
-            targetProject.ReferencedProjects = targetProject.ReferencedProjects.Except(projectsToRemove)
-                                                                                             .Concat(projectsToAdd)
-                                                                                             .ToArray();
+            targetProject.ReferencedProjects = this.collectionModifier.Prepare(targetProject.ReferencedProjects.Except(projectsToRemove)
+                                                                                             .Concat(projectsToAdd));
+        }
+
+        private bool IsProjectToRemove(IProject project, IEnumerable<IProject> projectsToAdd)
+        {
+            return project is RemovedProject && projectsToAdd.Any(pp => pp.GUID == project.GUID);
         }
 
         private void ApplyReferencedProjectChanges(Project project)
@@ -157,10 +169,9 @@ namespace ProjectReferencesManager.Tools
             this.modifier.AddReference(project.GetAbsolutePath(this.solution), project, addedProjects);
             this.modifier.RemoveReference(project.GetAbsolutePath(this.solution), removedProjects);
 
-            project.ReferencedProjects = project.ReferencedProjects.Except(removedProjects)
+            project.ReferencedProjects = this.collectionModifier.Prepare(project.ReferencedProjects.Except(removedProjects)
                                                                    .Except(addedProjects)
-                                                                   .Concat(addedProjects.FindOriginalProjects(this.solution.Projects))
-                                                                   .ToArray();
+                                                                   .Concat(addedProjects.FindOriginalProjects(this.solution.Projects)));
         }
 
         private void ApplyDependentProjectChanges(Project project)
@@ -173,10 +184,9 @@ namespace ProjectReferencesManager.Tools
                 this.modifier.AddReference(addedProject.GetAbsolutePath(this.solution), addedProject, new[] { project });
             }
 
-            project.DependentProjects = project.DependentProjects.Except(removedProjects)
+            project.DependentProjects = this.collectionModifier.Prepare(project.DependentProjects.Except(removedProjects)
                                                                  .Except(addedProjects)
-                                                                 .Concat(addedProjects.FindOriginalProjects(this.solution.Projects))
-                                                                 .ToArray();
+                                                                 .Concat(addedProjects.FindOriginalProjects(this.solution.Projects)));
         }
 
         private void RemoveFromDependent(Project targetProject, IEnumerable<IProject> projectsToRemove)
@@ -185,7 +195,7 @@ namespace ProjectReferencesManager.Tools
             var projectsToAdd = projectsToRemove.Where(p => p is Project || p is RemovedProject)
                                                 .Select(p => new RemovedProject(p));
 
-            targetProject.DependentProjects = newProjects.Concat(projectsToAdd).ToArray();
+            targetProject.DependentProjects = this.collectionModifier.Prepare(newProjects.Concat(projectsToAdd));
         }
 
         private void RemoveFromReferenced(Project targetProject, IEnumerable<IProject> projectsToRemove)
@@ -194,7 +204,7 @@ namespace ProjectReferencesManager.Tools
             var projectsToAdd = projectsToRemove.Where(p => p is Project || p is RemovedProject)
                                                 .Select(p => new RemovedProject(p));
 
-            targetProject.ReferencedProjects = newProjects.Concat(projectsToAdd).ToArray();
+            targetProject.ReferencedProjects = this.collectionModifier.Prepare(newProjects.Concat(projectsToAdd));
         }
     }
 }
