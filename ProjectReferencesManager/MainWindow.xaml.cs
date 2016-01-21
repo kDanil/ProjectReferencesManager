@@ -9,7 +9,11 @@ namespace ProjectReferencesManager
         {
             InitializeComponent();
 
-            this.DataContext = new ToolsContainer().MainWindowViewModel;
+            var viewModel = new ToolsContainer().MainWindowViewModel;
+
+            this.Closing += (s, e) => e.Cancel = !viewModel.CanClose();
+
+            this.DataContext = viewModel;
         }
     }
 }

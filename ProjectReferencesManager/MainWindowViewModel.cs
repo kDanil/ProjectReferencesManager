@@ -18,6 +18,8 @@ namespace ProjectReferencesManager
 
         int ChangesCount { get; }
 
+        bool CanClose();
+
         void RunWithRefresh(Action action);
     }
 
@@ -27,6 +29,7 @@ namespace ProjectReferencesManager
         private readonly IProjectsChangesManager changesManager;
         private readonly ISolutionLoader loader;
         private readonly ISolutionFileOpener fileOpener;
+        private readonly IUserInteraction interaction;
         private Project selectedProject;
         private Solution selectedSolution;
 
@@ -34,12 +37,14 @@ namespace ProjectReferencesManager
             ISolutionFileOpener fileOpener,
             ISolutionLoader loader,
             ICopyingManager copyingManager,
-            IProjectsChangesManager changesManager)
+            IProjectsChangesManager changesManager,
+            IUserInteraction interaction)
         {
             this.fileOpener = fileOpener;
             this.loader = loader;
             this.copyingManager = copyingManager;
             this.changesManager = changesManager;
+            this.interaction = interaction;
 
             this.Commands = new MainWindowCommands();
 
@@ -50,16 +55,6 @@ namespace ProjectReferencesManager
             this.Commands.RestoreProjectsCommand = new RelayCommandWithParameter(p => this.RunWithRefresh(() => this.RestoreProjects(p)), this.CanRestoreProjects);
             this.Commands.RestoreProjectChangesCommand = new RelayCommand(() => this.RunWithRefresh(() => this.RestoreProjectChanges()), this.CanRestoreProjectChanges);
             this.Commands.ApplyProjectChangesCommand = new RelayCommand(() => this.RunWithRefresh(() => this.ApplyProjectChanges()), this.CanApplyProjectChanges);
-        }
-
-        private void RestoreProjectChanges()
-        {
-            this.changesManager.RestoreProjectChanges(this.SelectedSolution);
-        }
-
-        private bool CanRestoreProjectChanges()
-        {
-            return this.SelectedSolution != null && this.SelectedSolution.GetChangedProjects().Any();
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -128,6 +123,29 @@ namespace ProjectReferencesManager
         {
             action();
             this.RefreshChangesInformation();
+        }
+
+        public bool CanClose()
+        {
+            if (this.IsChanges)
+            {
+                if (this.interaction.Ask("There are changes which are not have been applied yet.\nAre you sure you want to quit?"))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void RestoreProjectChanges()
+        {
+            this.changesManager.RestoreProjectChanges(this.SelectedSolution);
+        }
+
+        private bool CanRestoreProjectChanges()
+        {
+            return this.SelectedSolution != null && this.SelectedSolution.GetChangedProjects().Any();
         }
 
         private void PasteProjects(object type)

@@ -9,7 +9,7 @@ namespace ProjectReferencesManager
     {
         public static IEnumerable<Project> FindOriginalProjects(this IEnumerable<IProject> projects, IEnumerable<Project> solutionProjects)
         {
-            return solutionProjects.Where(p => projects.Any(ap => ap.GUID == p.GUID));
+            return solutionProjects.Where(p => projects.Any(ap => ap.AreEqual(p)));
         }
 
         public static bool IsChangedProject(this IProject project)
@@ -25,6 +25,11 @@ namespace ProjectReferencesManager
         public static IEnumerable<T> GetFilteredProjects<T>(this IEnumerable<IProject> projects) where T : IProject
         {
             return projects.Where(pr => pr.IsChangedProject()).OfType<T>();
+        }
+
+        public static bool AreEqual(this IProject project, IProject otherProject)
+        {
+            return project.GUID == otherProject.GUID;
         }
     }
 

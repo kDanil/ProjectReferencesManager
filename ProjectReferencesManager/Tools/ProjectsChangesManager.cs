@@ -80,6 +80,12 @@ namespace ProjectReferencesManager.Tools
         {
             var newProjects = this.copyingManager.Paste();
 
+            if (newProjects.Any(p => p.AreEqual(targetProject)))
+            {
+                this.CircularReferenceNotification(newProjects);
+                return;
+            }
+
             bool isCircular = false;
 
             switch (type)
@@ -113,9 +119,7 @@ namespace ProjectReferencesManager.Tools
 
             if (isCircular)
             {
-                this.interaction.ShowError("Circular reference detected");
-
-                this.copyingManager.Copy(newProjects);
+                this.CircularReferenceNotification(newProjects);
             }
         }
 
@@ -142,9 +146,16 @@ namespace ProjectReferencesManager.Tools
             }
         }
 
+        private void CircularReferenceNotification(IEnumerable<IProject> newProjects)
+        {
+            this.interaction.ShowError("Circular reference detected");
+
+            this.copyingManager.Copy(newProjects);
+        }
+
         private bool IsProjectExists(IProject project, IEnumerable<IProject> newProjects)
         {
-            return !project.IsChangedProject() && newProjects.Any(np => np.GUID == project.GUID);
+            return !project.IsChangedProject() && newProjects.Any(np => np.AreEqual(project));
         }
 
         private void AddToDependent(Project targetProject, IEnumerable<IProject> newProjects)
@@ -173,7 +184,7 @@ namespace ProjectReferencesManager.Tools
 
         private bool IsProjectToRemove(IProject project, IEnumerable<IProject> projectsToAdd)
         {
-            return project is RemovedProject && projectsToAdd.Any(pp => pp.GUID == project.GUID);
+            return project is RemovedProject && projectsToAdd.Any(pp => pp.AreEqual(project));
         }
 
         private void ApplyReferencedProjectChanges(Project project)
