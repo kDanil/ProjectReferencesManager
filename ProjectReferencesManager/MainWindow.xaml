@@ -36,9 +36,18 @@
 
         <DataTemplate DataType="{x:Type model:Project}">
             <DockPanel>
-                <Image Source="Resources/Normal.png" />
+                <Image Name="Icon"
+                       Source="Resources/Normal.png" />
                 <TextBlock Text="{Binding Path=Name}" />
             </DockPanel>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding Path=HasChangedProjects}"
+                             Value="True">
+                    <Setter TargetName="Icon"
+                            Property="Source"
+                            Value="Resources/Modified.png" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
         </DataTemplate>
 
         <DataTemplate DataType="{x:Type model:AddedProject}">
@@ -90,11 +99,18 @@
                     <TextBlock Text="{Binding Path=ChangesCount}"
                                Margin="5" />
                 </DockPanel>
-                <Button Margin="5"
-                        HorizontalAlignment="Left"
-                        Width="75"
-                        Content="Apply"
-                        Command="{Binding Path=Commands.ApplyProjectChangesCommand}" />
+                <StackPanel Orientation="Horizontal">
+                    <Button Margin="5"
+                            HorizontalAlignment="Left"
+                            Width="75"
+                            Content="Restore"
+                            Command="{Binding Path=Commands.RestoreProjectChangesCommand}" />
+                    <Button Margin="5"
+                            HorizontalAlignment="Left"
+                            Width="75"
+                            Content="Apply"
+                            Command="{Binding Path=Commands.ApplyProjectChangesCommand}" />
+                </StackPanel>
             </StackPanel>
         </Grid>
         <Grid>

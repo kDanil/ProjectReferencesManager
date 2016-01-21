@@ -10,11 +10,13 @@ namespace ProjectReferencesManager.Tools
 
         void ApplyProjectChanges();
 
-        void RestoreProjects(Project targetProject, IEnumerable<RemovedProject> removedProjects, ProjectListType projectType);
+        void RestoreProjects(ProjectListType projectType, Project targetProject, IEnumerable<RemovedProject> removedProjects);
 
         void PasteProjects(Project targetProject, ProjectListType type);
 
         void RemoveProjects(ProjectListType listType, Project targetProject, IEnumerable<IProject> projectsToRemove);
+
+        void RestoreProjectChanges(Solution selectedSolution);
     }
 
     public class ProjectsChangesManager : IProjectsChangesManager
@@ -41,16 +43,19 @@ namespace ProjectReferencesManager.Tools
 
         public void ApplyProjectChanges()
         {
-            foreach (var project in this.solution.Projects.Where(p => p.DependentProjects.Any(pr => pr.IsChangedProject()) ||
-                                                                      p.ReferencedProjects.Any(pr => pr.IsChangedProject())))
+            if (this.interaction.Ask("You project files will be changed permanently.\nAre you sure you want to apply changes?"))
             {
-                this.ApplyDependentProjectChanges(project);
+                foreach (var project in this.solution.Projects.Where(p => p.DependentProjects.Any(pr => pr.IsChangedProject()) ||
+                                                                          p.ReferencedProjects.Any(pr => pr.IsChangedProject())))
+                {
+                    this.ApplyDependentProjectChanges(project);
 
-                this.ApplyReferencedProjectChanges(project);
+                    this.ApplyReferencedProjectChanges(project);
+                }
             }
         }
 
-        public void RestoreProjects(Project targetProject, IEnumerable<RemovedProject> removedProjects, ProjectListType projectType)
+        public void RestoreProjects(ProjectListType projectType, Project targetProject, IEnumerable<RemovedProject> removedProjects)
         {
             var removedProjectGUIDs = removedProjects.Select(p => p.GUID).ToArray();
             var projectsToAdd = this.solution.Projects.Where(p => removedProjectGUIDs.Contains(p.GUID));
@@ -128,6 +133,15 @@ namespace ProjectReferencesManager.Tools
             }
         }
 
+        public void RestoreProjectChanges(Solution solution)
+        {
+            if (this.interaction.Ask("All changes will be lost.\nAre you sure you want to restore changes?"))
+            {
+                this.RestoreRemovedProjects(solution);
+                this.RemoveAddedProjects(solution);
+            }
+        }
+
         private bool IsProjectExists(IProject project, IEnumerable<IProject> newProjects)
         {
             return !project.IsChangedProject() && newProjects.Any(np => np.GUID == project.GUID);
@@ -186,6 +200,11 @@ namespace ProjectReferencesManager.Tools
                 this.modifier.AddReference(addedProject.GetAbsolutePath(this.solution), addedProject, new[] { project });
             }
 
+            foreach (var removedProject in removedProjects)
+            {
+                this.modifier.RemoveReference(removedProject.GetAbsolutePath(this.solution), new[] { project });
+            }
+
             project.DependentProjects = project.DependentProjects.Except(removedProjects)
                                                                  .Except(addedProjects)
                                                                  .Concat(addedProjects.FindOriginalProjects(this.solution.Projects))
@@ -208,6 +227,32 @@ namespace ProjectReferencesManager.Tools
                                                 .Select(p => new RemovedProject(p));
 
             targetProject.ReferencedProjects = newProjects.Concat(projectsToAdd).ToArray();
+        }
+
+        private void RemoveAddedProjects(Solution solution)
+        {
+            foreach (var project in solution.Projects.Where(p => p.ReferencedProjects.GetFilteredProjects<AddedProject>().Any()))
+            {
+                this.RemoveProjects(ProjectListType.Referenced, project, project.ReferencedProjects.GetFilteredProjects<AddedProject>());
+            }
+
+            foreach (var project in solution.Projects.Where(p => p.DependentProjects.GetFilteredProjects<AddedProject>().Any()))
+            {
+                this.RemoveProjects(ProjectListType.Dependent, project, project.DependentProjects.GetFilteredProjects<AddedProject>());
+            }
+        }
+
+        private void RestoreRemovedProjects(Solution solution)
+        {
+            foreach (var project in solution.Projects.Where(p => p.ReferencedProjects.GetFilteredProjects<RemovedProject>().Any()))
+            {
+                this.RestoreProjects(ProjectListType.Referenced, project, project.ReferencedProjects.GetFilteredProjects<RemovedProject>());
+            }
+
+            foreach (var project in solution.Projects.Where(p => p.DependentProjects.GetFilteredProjects<RemovedProject>().Any()))
+            {
+                this.RestoreProjects(ProjectListType.Dependent, project, project.DependentProjects.GetFilteredProjects<RemovedProject>());
+            }
         }
     }
 }

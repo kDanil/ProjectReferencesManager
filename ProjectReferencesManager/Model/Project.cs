@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System.Linq;
+using System.Collections.Generic;
 using System.ComponentModel;
 
 namespace ProjectReferencesManager.Model
@@ -38,7 +39,17 @@ namespace ProjectReferencesManager.Model
                 {
                     this.referencedProjects = value;
                     this.PropertyChanged.Raise(() => this.ReferencedProjects);
+                    this.PropertyChanged.Raise(() => this.HasChangedProjects);
                 }
+            }
+        }
+
+        public bool HasChangedProjects
+        {
+            get
+            {
+                return this.ReferencedProjects.Any(p => p.IsChangedProject()) ||
+                       this.DependentProjects.Any(p => p.IsChangedProject());
             }
         }
 
@@ -55,6 +66,7 @@ namespace ProjectReferencesManager.Model
                 {
                     this.dependentProjects = value;
                     this.PropertyChanged.Raise(() => this.DependentProjects);
+                    this.PropertyChanged.Raise(() => this.HasChangedProjects);
                 }
             }
         }

@@ -10,7 +10,7 @@ namespace ProjectReferencesManager.Tools
     {
         void AddReference(string projectPath, IProject targetProject, IEnumerable<IProject> newProjects);
 
-        void RemoveReference(string projectPath, IEnumerable<RemovedProject> removedProjects);
+        void RemoveReference(string projectPath, IEnumerable<IProject> removedProjects);
     }
 
     public class ReferencesModifier : IReferencesModifier
@@ -47,7 +47,7 @@ namespace ProjectReferencesManager.Tools
             root.Save(projectPath);
         }
 
-        public void RemoveReference(string projectPath, IEnumerable<RemovedProject> removedProjects)
+        public void RemoveReference(string projectPath, IEnumerable<IProject> removedProjects)
         {
             var root = this.reader.ReadDocument(projectPath);
             var elementGroup = this.reader.ReadReferencesGroup(root);
@@ -59,7 +59,7 @@ namespace ProjectReferencesManager.Tools
             root.Save(projectPath);
         }
 
-        private bool IsProjectToRemove(IEnumerable<RemovedProject> removedProjects, XElement e)
+        private bool IsProjectToRemove(IEnumerable<IProject> removedProjects, XElement e)
         {
             return e.Name.LocalName == "ProjectReference" && e.Elements().Any(n => n.Name.LocalName == "Project" && removedProjects.Any(p => p.GUID == GUIDFormatter.Format(n.Value)));
         }

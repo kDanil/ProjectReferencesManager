@@ -48,7 +48,18 @@ namespace ProjectReferencesManager
             this.Commands.PasteProjectsCommand = new RelayCommandWithParameter(p => this.RunWithRefresh(() => this.PasteProjects(p)), this.CanPasteProjects);
             this.Commands.RemoveProjectsCommand = new RelayCommandWithParameter(p => this.RunWithRefresh(() => this.RemoveProjects(p)), this.CanRemoveProjects);
             this.Commands.RestoreProjectsCommand = new RelayCommandWithParameter(p => this.RunWithRefresh(() => this.RestoreProjects(p)), this.CanRestoreProjects);
+            this.Commands.RestoreProjectChangesCommand = new RelayCommand(() => this.RunWithRefresh(() => this.RestoreProjectChanges()), this.CanRestoreProjectChanges);
             this.Commands.ApplyProjectChangesCommand = new RelayCommand(() => this.RunWithRefresh(() => this.ApplyProjectChanges()), this.CanApplyProjectChanges);
+        }
+
+        private void RestoreProjectChanges()
+        {
+            this.changesManager.RestoreProjectChanges(this.SelectedSolution);
+        }
+
+        private bool CanRestoreProjectChanges()
+        {
+            return this.SelectedSolution != null && this.SelectedSolution.GetChangedProjects().Any();
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -130,7 +141,7 @@ namespace ProjectReferencesManager
             var listBoxType = (ProjectListType)listBox.Tag;
             var removedProjects = listBox.SelectedItems.OfType<RemovedProject>();
 
-            this.changesManager.RestoreProjects(this.SelectedProject, removedProjects, listBoxType);
+            this.changesManager.RestoreProjects(listBoxType, this.SelectedProject, removedProjects);
         }
 
         private bool CanRestoreProjects(object projectsListBox)

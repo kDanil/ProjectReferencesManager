@@ -17,6 +17,8 @@ namespace ProjectReferencesManager
 
         public ICommand ApplyProjectChangesCommand { get; set; }
 
+        public ICommand RestoreProjectChangesCommand { get; set; }
+
         public ICommand CopyProjectsCommand { get; set; }
     }
 }
