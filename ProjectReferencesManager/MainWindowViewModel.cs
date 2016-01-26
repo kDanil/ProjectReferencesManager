@@ -131,11 +131,11 @@ namespace ProjectReferencesManager
             {
                 if (this.interaction.Ask("There are changes which are not have been applied yet.\nAre you sure you want to quit?"))
                 {
-                    return true;
+                    return false;
                 }
             }
 
-            return false;
+            return true;
         }
 
         private void RestoreProjectChanges()

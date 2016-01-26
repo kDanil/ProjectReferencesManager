@@ -41,6 +41,10 @@ namespace ProjectReferencesManager.Tools
                 projectReference.Add(projectItem);
                 projectReference.Add(name);
 
+                projectReference.Name = elementGroup.Name.Namespace + projectReference.Name.LocalName;
+                projectItem.Name = elementGroup.Name.Namespace + projectItem.Name.LocalName;
+                name.Name = elementGroup.Name.Namespace + name.Name.LocalName;
+
                 elementGroup.Add(projectReference);
             }
 
