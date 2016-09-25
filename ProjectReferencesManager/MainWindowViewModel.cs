@@ -129,7 +129,7 @@ namespace ProjectReferencesManager
         {
             if (this.IsChanges)
             {
-                if (this.interaction.Ask("There are changes which are not have been applied yet.\nAre you sure you want to quit?"))
+                if (!this.interaction.Ask("There are changes which are not have been applied yet.\nAre you sure you want to quit?"))
                 {
                     return false;
                 }
